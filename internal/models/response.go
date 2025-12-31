@@ -29,3 +29,25 @@ type ErrorResponse struct {
 		Status  string `json:"status"`
 	} `json:"error"`
 }
+
+// OpenAI Response Structures
+type OpenAIResponseChoice struct {
+	Index        int                  `json:"index"`
+	Message      OpenAIRequestMessage `json:"message"`
+	FinishReason string               `json:"finish_reason"`
+}
+
+type OpenAIResponseUsage struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
+	TotalTokens      int `json:"total_tokens"`
+}
+
+type OpenAIResponse struct {
+	ID      string                 `json:"id"`
+	Object  string                 `json:"object"`
+	Created int64                  `json:"created"`
+	Model   string                 `json:"model"`
+	Choices []OpenAIResponseChoice `json:"choices"`
+	Usage   OpenAIResponseUsage    `json:"usage"`
+}

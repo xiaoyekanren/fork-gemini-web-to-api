@@ -22,3 +22,22 @@ type SimpleChatRequest struct {
 		Secure1PSIDTS string `json:"__Secure-1PSIDTS"`
 	} `json:"cookies"`
 }
+
+// OpenAI Chat Completion Request
+type OpenAIRequestMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type OpenAIRequest struct {
+	Model    string                 `json:"model"`
+	Messages []OpenAIRequestMessage `json:"messages"`
+	Stream   bool                   `json:"stream"`
+}
+
+// Translate Request (mimicking the Python GeminiRequest)
+type TranslateRequest struct {
+	Model   string   `json:"model"`
+	Message string   `json:"message"`
+	Files   []string `json:"files,omitempty"`
+}
