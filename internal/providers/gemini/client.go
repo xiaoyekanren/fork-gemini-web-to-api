@@ -1,167 +1,488 @@
 package gemini
 
 import (
+	"compress/gzip"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
+	"ai-bridges/internal/providers"
+	"ai-bridges/pkg/logger"
+
 	"github.com/imroc/req/v3"
+	"go.uber.org/zap"
 )
 
+// Client implements the Provider interface for Gemini
 type Client struct {
 	httpClient *req.Client
-	cookies    map[string]string
-	at         string // SNlM0e
+	cookies    *CookieStore
+	at         string // SNlM0e token
+	mu         sync.RWMutex
+	healthy    bool
+	
+	// Auto-refresh settings
+	autoRefresh     bool
+	refreshInterval time.Duration
+	stopRefresh     chan struct{}
+
+	// Request serialization
+	reqMu sync.Mutex
 }
 
-func NewClient(secure1PSID, secure1PSIDTS string) *Client {
-	cookies := map[string]string{
-		"__Secure-1PSID":   secure1PSID,
-		"__Secure-1PSIDTS": secure1PSIDTS,
+// CookieStore manages Gemini authentication cookies
+type CookieStore struct {
+	Secure1PSID   string    `json:"__Secure-1PSID"`
+	Secure1PSIDTS string    `json:"__Secure-1PSIDTS"`
+	Secure1PSIDCC string    `json:"__Secure-1PSIDCC"`
+	UpdatedAt     time.Time `json:"updated_at"`
+	mu            sync.RWMutex
+}
+
+// NewClient creates a new Gemini client
+func NewClient(secure1PSID, secure1PSIDTS, secure1PSIDCC string, refreshIntervalMinutes int) *Client {
+	cookies := &CookieStore{
+		Secure1PSID:   secure1PSID,
+		Secure1PSIDTS: secure1PSIDTS,
+		Secure1PSIDCC: secure1PSIDCC,
+		UpdatedAt:     time.Now(),
 	}
 
 	client := req.NewClient().
-		SetTimeout(5 * time.Minute).
+		SetTimeout(2 * time.Minute).
 		SetCommonHeaders(DefaultHeaders).
-		EnableDumpAllWithoutBody() // For debugging
+		EnableDumpAllWithoutBody()
+
+	if refreshIntervalMinutes <= 0 {
+		refreshIntervalMinutes = 30 // Increased default to 30 minutes
+	}
 
 	return &Client{
-		httpClient: client,
-		cookies:    cookies,
+		httpClient:      client,
+		cookies:         cookies,
+		autoRefresh:     true,
+		refreshInterval: time.Duration(refreshIntervalMinutes) * time.Minute,
+		stopRefresh:     make(chan struct{}),
 	}
 }
 
+// Init initializes the client and starts auto-refresh
+func (c *Client) Init(ctx context.Context) error {
+	// 1. Clean cookies
+	c.cookies.Secure1PSID = cleanCookie(c.cookies.Secure1PSID)
+	c.cookies.Secure1PSIDTS = cleanCookie(c.cookies.Secure1PSIDTS)
+	c.cookies.Secure1PSIDCC = cleanCookie(c.cookies.Secure1PSIDCC)
 
-func (c *Client) toHttpCookies() []*http.Cookie {
-	var cookies []*http.Cookie
-	for k, v := range c.cookies {
-		cookies = append(cookies, &http.Cookie{
-			Name:   k,
-			Value:  v,
-			Domain: ".google.com",
-			Path:   "/",
-		})
+	// 1b. Always try to load 1PSIDTS from disk cache (it might be fresher than config)
+	if c.cookies.Secure1PSID != "" {
+		if cachedTS, err := c.LoadCachedCookies(); err == nil && cachedTS != "" {
+			c.cookies.Secure1PSIDTS = cachedTS
+			logger.Info("Loaded valid __Secure-1PSIDTS from local cache (overriding config)")
+		}
 	}
-	return cookies
-}
 
-func (c *Client) Init() error {
-	// 1. Get Google homepage to set initial cookies (optional but good practice)
-	_, err := c.httpClient.R().
-		SetCookies(c.toHttpCookies()...).
-		Get(EndpointGoogle)
+	// 2. If we still only have PSID, try to get PSIDTS through rotation (might fail if no cache)
+	if c.cookies.Secure1PSID != "" && c.cookies.Secure1PSIDTS == "" {
+		logger.Info("Only __Secure-1PSID provided, attempting to obtain __Secure-1PSIDTS via rotation...")
+		if err := c.RotateCookies(); err != nil {
+			logger.Info("Rotation failed, proceeding with just __Secure-1PSID (might fail)", zap.String("error", err.Error()))
+		} else {
+			logger.Info("Successfully obtained __Secure-1PSIDTS via rotation")
+		}
+	}
+
+	// 3. Populate cookies in the main client
+	c.httpClient.SetCommonCookies(c.cookies.ToHTTPCookies()...)
+
+	// 4. Try to get SNlM0e token
+	err := c.refreshSessionToken()
 	if err != nil {
-		return fmt.Errorf("failed to reach google.com: %w", err)
+		logger.Debug("Initial session token fetch failed, attempting cookie rotation", zap.Error(err))
+		// Try to rotate cookies and retry
+		if rotErr := c.RotateCookies(); rotErr == nil {
+			logger.Debug("Cookie rotation succeeded, retrying session token fetch")
+			err = c.refreshSessionToken()
+		} else {
+			logger.Debug("Cookie rotation failed", zap.Error(rotErr))
+		}
 	}
 
-	// 2. Get Gemini App page to extract SNlM0e
-	resp, err := c.httpClient.R().
-		SetCookies(c.toHttpCookies()...).
-		Get(EndpointInit)
 	if err != nil {
-		return fmt.Errorf("failed to reach gemini app: %w", err)
+		return err
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("gemini app returned status: %d", resp.StatusCode)
+	// Save the valid cookies to cache immediately after successful init
+	_ = c.SaveCachedCookies()
+
+	logger.Info("✅ Gemini client initialized successfully")
+
+	// 5. Start auto-refresh in background
+	if c.autoRefresh {
+		go c.startAutoRefresh()
 	}
 
-	// Extract SNlM0e
-	re := regexp.MustCompile(`"SNlM0e":"(.*?)"`)
-	matches := re.FindStringSubmatch(resp.String())
-	if len(matches) < 2 {
-		return errors.New("SNlM0e not found in response, check cookies")
-	}
-
-	c.at = matches[1]
 	return nil
 }
 
-// GenerateContent sends a message to Gemini and returns the response text.
-// This is a simplified version handling single-turn text chat.
-func (c *Client) GenerateContent(prompt string) (string, error) {
-	if c.at == "" {
-		return "", errors.New("client not initialized, call Init() first")
+func (c *Client) refreshSessionToken() error {
+	// 1. Initial hit to google.com to get extra cookies (NID, etc)
+	tmpClient := req.NewClient().
+		SetTimeout(30 * time.Second).
+		SetUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+	
+	resp1, err := tmpClient.R().Get("https://www.google.com/")
+	extraCookies := ""
+	if err == nil {
+		parts := []string{}
+		for _, ck := range resp1.Cookies() {
+			parts = append(parts, fmt.Sprintf("%s=%s", ck.Name, ck.Value))
+			// Also sync to main client
+			c.httpClient.SetCommonCookies(ck)
+		}
+		if len(parts) > 0 {
+			extraCookies = strings.Join(parts, "; ") + "; "
+		}
 	}
 
-	// Construct the complex payload
-	// Inner payload: [["prompt"], null, null]
+	// 2. Prepare full cookie string
+	cookieStr := fmt.Sprintf("%s__Secure-1PSID=%s; __Secure-1PSIDTS=%s", 
+		extraCookies, c.cookies.Secure1PSID, c.cookies.Secure1PSIDTS)
+	if c.cookies.Secure1PSIDCC != "" {
+		cookieStr += fmt.Sprintf("; __Secure-1PSIDCC=%s", c.cookies.Secure1PSIDCC)
+	}
+
+	commonHeaders := map[string]string{
+		"Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+		"Accept-Language":           "en-US,en;q=0.9",
+		"Cache-Control":             "max-age=0",
+		"Origin":                    "https://gemini.google.com",
+		"Sec-Ch-Ua":                 `"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"`,
+		"Sec-Ch-Ua-Mobile":          "?0",
+		"Sec-Ch-Ua-Platform":        `"Windows"`,
+		"Sec-Fetch-Dest":            "document",
+		"Sec-Fetch-Mode":            "navigate",
+		"Sec-Fetch-Site":            "none",
+		"Sec-Fetch-User":            "?1",
+		"Upgrade-Insecure-Requests": "1",
+		"X-Same-Domain":             "1",
+		"User-Agent":                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+	}
+
+	hClient := &http.Client{
+		Timeout: 30 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return nil // follow redirects
+		},
+	}
+
+	// Helper to merge cookies into a map to avoid duplicates
+	mergeCookies := func(baseStr string, newCks []*http.Cookie) string {
+		m := make(map[string]string)
+		for _, part := range strings.Split(baseStr, ";") {
+			p := strings.TrimSpace(part)
+			if p == "" {
+				continue
+			}
+			kv := strings.SplitN(p, "=", 2)
+			if len(kv) == 2 {
+				m[kv[0]] = kv[1]
+			}
+		}
+		for _, ck := range newCks {
+			m[ck.Name] = ck.Value
+		}
+		res := []string{}
+		for k, v := range m {
+			res = append(res, fmt.Sprintf("%s=%s", k, v))
+		}
+		return strings.Join(res, "; ")
+	}
+
+	req1, _ := http.NewRequest("GET", "https://gemini.google.com/?hl=en", nil)
+	for k, v := range commonHeaders {
+		req1.Header.Set(k, v)
+	}
+	req1.Header.Set("Cookie", cookieStr)
+	resp1_direct, _ := hClient.Do(req1)
+	if resp1_direct != nil {
+		cookieStr = mergeCookies(cookieStr, resp1_direct.Cookies())
+		for _, ck := range resp1_direct.Cookies() {
+			c.httpClient.SetCommonCookies(ck)
+		}
+		resp1_direct.Body.Close()
+	}
+
+	// 2. The main INIT hit
+	req2, _ := http.NewRequest("GET", EndpointInit+"?hl=en", nil)
+	for k, v := range commonHeaders {
+		req2.Header.Set(k, v)
+	}
+	req2.Header.Set("Sec-Fetch-Site", "same-origin")
+	req2.Header.Set("Cookie", cookieStr)
+	req2.Header.Set("Referer", "https://gemini.google.com/")
+	req2.Header.Set("Accept-Encoding", "gzip, deflate, br")
+
+	resp, err := hClient.Do(req2)
+	if err != nil {
+		return fmt.Errorf("failed to reach gemini app: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Dump for debugging if it fails
+	// reqDump, _ := httputil.DumpRequestOut(req2, false)
+	// respDump, _ := httputil.DumpResponse(resp, false)
+	
+	var bodyReader io.ReadCloser = resp.Body
+	if strings.Contains(resp.Header.Get("Content-Encoding"), "gzip") {
+		gz, err := gzip.NewReader(resp.Body)
+		if err == nil {
+			bodyReader = gz
+			defer gz.Close()
+		}
+	}
+
+	bodyBytes, _ := io.ReadAll(bodyReader)
+	body := string(bodyBytes)
+
+
+	re := regexp.MustCompile(`"SNlM0e":"([^"]+)"`)
+	matches := re.FindStringSubmatch(body)
+	if len(matches) < 2 {
+		reFallback := regexp.MustCompile(`\["SNlM0e","([^"]+)"\]`)
+		matches = reFallback.FindStringSubmatch(body)
+		if len(matches) < 2 {
+
+
+			errMsg := "authentication failed: SNlM0e not found"
+			if strings.Contains(body, "Sign in") || strings.Contains(body, "login") {
+				errMsg = "authentication failed: cookies invalid. Please provide __Secure-1PSIDTS in addition to __Secure-1PSID"
+			}
+
+			// Log as Info to avoid stack trace for expected auth failures
+			logger.Info(errMsg)
+			return fmt.Errorf("%s", errMsg)
+		}
+	}
+
+	c.mu.Lock()
+	c.at = matches[1]
+	c.healthy = true
+	c.mu.Unlock()
+	return nil
+}
+
+// startAutoRefresh periodically refreshes the PSIDTS cookie
+func (c *Client) startAutoRefresh() {
+	ticker := time.NewTicker(c.refreshInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if err := c.RotateCookies(); err != nil {
+				logger.Error("Cookie rotation failed", zap.Error(err))
+			}
+		case <-c.stopRefresh:
+			return
+		}
+	}
+}
+
+// RotateCookies refreshes the __Secure-1PSIDTS cookie
+func (c *Client) RotateCookies() error {
+	c.cookies.mu.Lock()
+	defer c.cookies.mu.Unlock()
+
+	// Prepare cookies for rotation request
+	// NOTE: We access fields directly instead of using ToHTTPCookies() to avoid recursive locking (deadlock)
+	parts := []string{}
+	if c.cookies.Secure1PSID != "" {
+		parts = append(parts, fmt.Sprintf("__Secure-1PSID=%s", c.cookies.Secure1PSID))
+	}
+	if c.cookies.Secure1PSIDTS != "" {
+		parts = append(parts, fmt.Sprintf("__Secure-1PSIDTS=%s", c.cookies.Secure1PSIDTS))
+	}
+	if c.cookies.Secure1PSIDCC != "" {
+		parts = append(parts, fmt.Sprintf("__Secure-1PSIDCC=%s", c.cookies.Secure1PSIDCC))
+	}
+	cookieStr := strings.Join(parts, "; ")
+
+	// Payload must be exactly this string
+	strBody := `[000,"-0000000000000000000"]`
+	req, _ := http.NewRequest("POST", EndpointRotateCookies, strings.NewReader(strBody))
+	
+	req.Header.Set("Content-Type", "application/json")
+	// Google often blocks requests with default Go-http-client User-Agent
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+	req.Header.Set("Cookie", cookieStr)
+
+	logger.Debug("Sending rotation request", zap.String("url", EndpointRotateCookies))
+	hClient := &http.Client{Timeout: 5 * time.Second}
+	resp, err := hClient.Do(req)
+	if err != nil {
+		// Log as Info to avoid scary stacktraces in development mode for expected auth failures
+		logger.Info("Rotation request failed (network/auth issue)", zap.String("error", err.Error()))
+		return fmt.Errorf("failed to call rotation endpoint: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		logger.Info("Rotation failed (likely invalid __Secure-1PSID)", zap.Int("status", resp.StatusCode))
+		return fmt.Errorf("rotation failed with status %d", resp.StatusCode)
+	}
+
+	// Extract new PSIDTS from Set-Cookie headers
+	found := false
+	for _, cookie := range resp.Cookies() {
+		if cookie.Name == "__Secure-1PSIDTS" {
+			c.cookies.Secure1PSIDTS = cookie.Value
+			c.cookies.UpdatedAt = time.Now()
+			found = true
+			// Save the new cookie to cache immediately
+			_ = c.SaveCachedCookies()
+		}
+		if cookie.Name == "__Secure-1PSIDCC" {
+			c.cookies.Secure1PSIDCC = cookie.Value
+		}
+		// Sync to req/v3 client for future calls
+		c.httpClient.SetCommonCookies(cookie)
+	}
+
+	if found {
+		logger.Info("Cookie rotated successfully", zap.Time("updated_at", c.cookies.UpdatedAt))
+		return nil
+	}
+
+	return errors.New("no new __Secure-1PSIDTS cookie received")
+}
+
+// GetCookies returns current cookies (for client to persist)
+func (c *Client) GetCookies() *CookieStore {
+	c.cookies.mu.RLock()
+	defer c.cookies.mu.RUnlock()
+	
+	return &CookieStore{
+		Secure1PSID:   c.cookies.Secure1PSID,
+		Secure1PSIDTS: c.cookies.Secure1PSIDTS,
+		UpdatedAt:     c.cookies.UpdatedAt,
+	}
+}
+
+// GenerateContent implements Provider interface
+func (c *Client) GenerateContent(ctx context.Context, prompt string, options ...providers.GenerateOption) (*providers.Response, error) {
+	c.reqMu.Lock()
+	defer c.reqMu.Unlock()
+
+	config := &providers.GenerateConfig{
+		Model: "gemini-pro", // default
+	}
+	for _, opt := range options {
+		opt(config)
+	}
+
+	if c.at == "" {
+		return nil, errors.New("client not initialized")
+	}
+
+	// Build request payload
 	inner := []interface{}{
 		[]interface{}{prompt},
 		nil,
-		nil, // chat metadata (cid, rid, rcid)
-	}
-
-	innerJSON, err := json.Marshal(inner)
-	if err != nil {
-		return "", err
-	}
-
-	outer := []interface{}{
 		nil,
-		string(innerJSON),
 	}
 
-	outerJSON, err := json.Marshal(outer)
-	if err != nil {
-		return "", err
-	}
+	innerJSON, _ := json.Marshal(inner)
+	outer := []interface{}{nil, string(innerJSON)}
+	outerJSON, _ := json.Marshal(outer)
 
-	// Request data
 	formData := map[string]string{
 		"at":    c.at,
 		"f.req": string(outerJSON),
 	}
 
 	resp, err := c.httpClient.R().
-		SetCookies(c.toHttpCookies()...).
 		SetFormData(formData).
 		SetQueryParam("at", c.at).
 		Post(EndpointGenerate)
 
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("generate content failed: %d", resp.StatusCode)
+		return nil, fmt.Errorf("generate failed with status: %d", resp.StatusCode)
 	}
 
 	return c.parseResponse(resp.String())
 }
 
+// StartChat implements Provider interface
+func (c *Client) StartChat(options ...providers.ChatOption) providers.ChatSession {
+	config := &providers.ChatConfig{
+		Model: "gemini-pro",
+	}
+	for _, opt := range options {
+		opt(config)
+	}
 
+	return &ChatSession{
+		client:   c,
+		model:    config.Model,
+		metadata: config.Metadata,
+		history:  []providers.Message{},
+	}
+}
 
-func (c *Client) parseResponse(text string) (string, error) {
+// Close implements Provider interface
+func (c *Client) Close() error {
+	close(c.stopRefresh)
+	c.mu.Lock()
+	c.healthy = false
+	c.mu.Unlock()
+	return nil
+}
+
+// GetName implements Provider interface
+func (c *Client) GetName() string {
+	return "gemini"
+}
+
+// IsHealthy implements Provider interface
+func (c *Client) IsHealthy() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.healthy
+}
+
+// parseResponse parses Gemini's response format
+func (c *Client) parseResponse(text string) (*providers.Response, error) {
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
-		// Gemini response often starts with this magic prefix
 		line = strings.TrimPrefix(line, ")]}'")
 
 		var root []interface{}
 		if err := json.Unmarshal([]byte(line), &root); err == nil {
-			// Iterate through the array of responses in this line
 			for _, item := range root {
-				// Each item is typically an array itself: ["wrb.fr", "[[...]]", ...]
 				itemArray, ok := item.([]interface{})
 				if !ok || len(itemArray) < 3 {
 					continue
 				}
 
-				// The payload is often a JSON string at index 2 (or variable)
-				// We specifically look for the candidate structure [rcid, [text, ...], ...] inside the string payload
-				// But sometimes the top level structure is simpler.
-				
-				// Let's look for known markers.
-				// Based on Python client: body usually at index 2 of the top level array
 				payloadStr, ok := itemArray[2].(string)
 				if !ok {
 					continue
@@ -172,19 +493,36 @@ func (c *Client) parseResponse(text string) (string, error) {
 					continue
 				}
 
-				// Inside payload, candidates are at index 4 (usually)
 				if len(payload) > 4 {
 					candidates, ok := payload[4].([]interface{})
 					if ok && candidates != nil && len(candidates) > 0 {
-						// Found candidates
 						firstCandidate, ok := candidates[0].([]interface{})
 						if ok && len(firstCandidate) >= 2 {
-							// text content part
 							contentParts, ok := firstCandidate[1].([]interface{})
 							if ok && len(contentParts) > 0 {
 								resText, ok := contentParts[0].(string)
 								if ok {
-									return resText, nil
+									// Extract conversation metadata if available
+									var cid, rid, rcid string
+									if len(firstCandidate) > 0 {
+										if id, ok := firstCandidate[0].(string); ok {
+											rcid = id
+										}
+									}
+									if len(payload) > 1 {
+										if id, ok := payload[1].(string); ok {
+											cid = id
+										}
+									}
+
+									return &providers.Response{
+										Text: resText,
+										Metadata: map[string]any{
+											"cid":  cid,
+											"rid":  rid,
+											"rcid": rcid,
+										},
+									}, nil
 								}
 							}
 						}
@@ -193,12 +531,100 @@ func (c *Client) parseResponse(text string) (string, error) {
 			}
 		}
 	}
-	
-	// Fallback: Dump the first few chars to error for debugging
-	debugText := text
-	if len(debugText) > 200 {
-		debugText = debugText[:200]
-	}
-	return "", fmt.Errorf("failed to parse valid response from Gemini. Response excerpt: %s", debugText)
+
+	return nil, fmt.Errorf("failed to parse response")
 }
 
+// ToHTTPCookies converts CookieStore to HTTP cookies
+func (cs *CookieStore) ToHTTPCookies() []*http.Cookie {
+	cs.mu.RLock()
+	defer cs.mu.RUnlock()
+
+	cookies := []*http.Cookie{}
+	domain := ".google.com"
+
+	if cs.Secure1PSID != "" {
+		cookies = append(cookies, &http.Cookie{
+			Name:     "__Secure-1PSID",
+			Value:    cleanCookie(cs.Secure1PSID),
+			Domain:   domain,
+			Path:     "/",
+			Secure:   true,
+			HttpOnly: true,
+			SameSite: http.SameSiteNoneMode,
+		})
+	}
+	if cs.Secure1PSIDTS != "" {
+		cookies = append(cookies, &http.Cookie{
+			Name:     "__Secure-1PSIDTS",
+			Value:    cleanCookie(cs.Secure1PSIDTS),
+			Domain:   domain,
+			Path:     "/",
+			Secure:   true,
+			HttpOnly: true,
+			SameSite: http.SameSiteNoneMode,
+		})
+	}
+	if cs.Secure1PSIDCC != "" {
+		cookies = append(cookies, &http.Cookie{
+			Name:     "__Secure-1PSIDCC",
+			Value:    cleanCookie(cs.Secure1PSIDCC),
+			Domain:   domain,
+			Path:     "/",
+			Secure:   true,
+			HttpOnly: true,
+			SameSite: http.SameSiteNoneMode,
+		})
+	}
+	return cookies
+}
+
+func cleanCookie(v string) string {
+	v = strings.TrimSpace(v)
+	v = strings.Trim(v, "\"")
+	v = strings.Trim(v, "'")
+	v = strings.TrimSuffix(v, ";")
+	return v
+}
+
+// LoadCachedCookies attempts to read the saved 1PSIDTS from disk
+func (c *Client) LoadCachedCookies() (string, error) {
+	if c.cookies.Secure1PSID == "" {
+		return "", errors.New("no PSID available")
+	}
+
+	hash := sha256.Sum256([]byte(c.cookies.Secure1PSID))
+	filename := filepath.Join(".cookies", hex.EncodeToString(hash[:])+".txt")
+
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return "", err
+	}
+
+	ts := strings.TrimSpace(string(data))
+	if ts == "" {
+		return "", errors.New("empty cache file")
+	}
+	return ts, nil
+}
+
+// SaveCachedCookies writes the current 1PSIDTS to disk
+func (c *Client) SaveCachedCookies() error {
+	if c.cookies.Secure1PSID == "" || c.cookies.Secure1PSIDTS == "" {
+		return nil
+	}
+
+	// Create directory if not exists
+	if err := os.MkdirAll(".cookies", 0755); err != nil {
+		return err
+	}
+
+	hash := sha256.Sum256([]byte(c.cookies.Secure1PSID))
+	filename := filepath.Join(".cookies", hex.EncodeToString(hash[:])+".txt")
+
+	err := os.WriteFile(filename, []byte(c.cookies.Secure1PSIDTS), 0600)
+	if err == nil {
+		logger.Debug("Saved __Secure-1PSIDTS to local cache for future use", zap.String("file", filename))
+	}
+	return err
+}
