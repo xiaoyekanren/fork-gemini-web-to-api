@@ -1,0 +1,173 @@
+basePath: /api/v1
+definitions:
+  models.Candidate:
+    properties:
+      content:
+        $ref: '#/definitions/models.Content'
+      finishReason:
+        type: string
+      index:
+        type: integer
+      safetyRatings:
+        items:
+          $ref: '#/definitions/models.SafetyRating'
+        type: array
+    type: object
+  models.Content:
+    properties:
+      parts:
+        items:
+          $ref: '#/definitions/models.Part'
+        type: array
+      role:
+        type: string
+    type: object
+  models.ErrorResponse:
+    properties:
+      error:
+        properties:
+          code:
+            type: integer
+          message:
+            type: string
+          status:
+            type: string
+        type: object
+    type: object
+  models.GoogleGenerativeRequest:
+    properties:
+      contents:
+        items:
+          $ref: '#/definitions/models.Content'
+        type: array
+    type: object
+  models.GoogleGenerativeResponse:
+    properties:
+      candidates:
+        items:
+          $ref: '#/definitions/models.Candidate'
+        type: array
+      promptFeedback:
+        $ref: '#/definitions/models.PromptFeedback'
+    type: object
+  models.Part:
+    properties:
+      text:
+        type: string
+    type: object
+  models.PromptFeedback:
+    properties:
+      safetyRatings:
+        items:
+          $ref: '#/definitions/models.SafetyRating'
+        type: array
+    type: object
+  models.SafetyRating:
+    properties:
+      category:
+        type: string
+      probability:
+        type: string
+    type: object
+  models.SimpleChatRequest:
+    properties:
+      cookies:
+        properties:
+          __Secure-1PSID:
+            type: string
+          __Secure-1PSIDTS:
+            type: string
+        type: object
+      message:
+        type: string
+    type: object
+host: localhost:3000
+info:
+  contact:
+    email: support@ai-bridges.dev
+    name: API Support
+  description: WebAI-to-API service for Go - Bridge Web interfaces of AI assistants
+    to standard APIs
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: AI Bridges API
+  version: "1.0"
+paths:
+  /gemini/chat:
+    post:
+      consumes:
+      - application/json
+      description: Send a message to Gemini. Cookies can be provided or auto-loaded
+        from browser
+      parameters:
+      - description: Chat request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.SimpleChatRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: response message
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: error message
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: authentication error
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: generation error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Simple Gemini chat endpoint
+      tags:
+      - Gemini Chat
+  /v1beta/models/{model}:
+    post:
+      consumes:
+      - application/json
+      description: Accepts requests in Google Generative AI format and returns responses
+        compatible with the official API
+      parameters:
+      - description: Model name (e.g., gemini-1.5-flash)
+        in: path
+        name: model
+        required: true
+        type: string
+      - description: Generation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.GoogleGenerativeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.GoogleGenerativeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Generate content using Google Generative AI format
+      tags:
+      - Google Generative AI
+swagger: "2.0"

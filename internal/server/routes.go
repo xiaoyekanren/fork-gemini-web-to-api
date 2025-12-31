@@ -1,56 +1,30 @@
 package server
 
 import (
-	"ai-bridges/internal/providers/gemini"
+	"ai-bridges/internal/handlers"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-type ChatRequest struct {
-	Message string `json:"message"`
-	Cookies struct {
-		Secure1PSID   string `json:"__Secure-1PSID"`
-		Secure1PSIDTS string `json:"__Secure-1PSIDTS"`
-	} `json:"cookies"`
-}
+// RegisterRoutes registers all application routes
+func RegisterRoutes(app *fiber.App) {
+	// API v1 group
+	api := app.Group("/api")
+	v1 := api.Group("/v1")
 
-type ChatResponse struct {
-	Response string `json:"response"`
-	Error    string `json:"error,omitempty"`
-}
+	// Google Generative AI compatible endpoints
+	// Matches: POST /api/v1/v1beta/models/{model}
+	v1beta := v1.Group("/v1beta")
+	v1beta.Post("/models/:model", handlers.HandleGoogleGenerativeGenerate)
 
-func RegisterRoutes(router fiber.Router) {
-	geminiGroup := router.Group("/gemini")
-	geminiGroup.Post("/chat", handleGeminiChat)
-}
+	// Custom endpoints for testing and utilities
+	v1.Post("/gemini/chat", handlers.HandleGeminiChat)
 
-func handleGeminiChat(c *fiber.Ctx) error {
-	var req ChatRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ChatResponse{Error: "Invalid request body"})
-	}
-
-	if req.Message == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(ChatResponse{Error: "Message cannot be empty"})
-	}
-
-	if req.Cookies.Secure1PSID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(ChatResponse{Error: "Missing __Secure-1PSID cookie"})
-	}
-
-	// Initialize Gemini Client
-	client := gemini.NewClient(req.Cookies.Secure1PSID, req.Cookies.Secure1PSIDTS)
-
-	// Perform Handshake/Auth
-	if err := client.Init(); err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(ChatResponse{Error: "Failed to authenticate with Gemini: " + err.Error()})
-	}
-
-	// Generate Content
-	response, err := client.GenerateContent(req.Message)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(ChatResponse{Error: "Generate content failed: " + err.Error()})
-	}
-
-	return c.JSON(ChatResponse{Response: response})
+	// Health check
+	app.Get("/health", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"status": "ok",
+			"service": "ai-bridges",
+		})
+	})
 }
