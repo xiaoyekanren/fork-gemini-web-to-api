@@ -12,7 +12,8 @@ const docTemplate = `{
         "termsOfService": "http://swagger.io/terms/",
         "contact": {
             "name": "API Support",
-            "email": "support@ai-bridges.dev"
+            "url": "http://www.swagger.io/support",
+            "email": "support@swagger.io"
         },
         "license": {
             "name": "MIT",
@@ -25,7 +26,7 @@ const docTemplate = `{
     "paths": {
         "/gemini/chat": {
             "post": {
-                "description": "Send a message to Gemini. Cookies can be provided or auto-loaded from browser",
+                "description": "Send a message in a chat session",
                 "consumes": [
                     "application/json"
                 ],
@@ -33,9 +34,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Gemini Chat"
+                    "Gemini"
                 ],
-                "summary": "Simple Gemini chat endpoint",
+                "summary": "Chat with Gemini",
                 "parameters": [
                     {
                         "description": "Chat request",
@@ -43,70 +44,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.SimpleChatRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "response message",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "error message",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "authentication error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "generation error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/v1beta/models/{model}": {
-            "post": {
-                "description": "Accepts requests in Google Generative AI format and returns responses compatible with the official API",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Google Generative AI"
-                ],
-                "summary": "Generate content using Google Generative AI format",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Model name (e.g., gemini-1.5-flash)",
-                        "name": "model",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Generation request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.GoogleGenerativeRequest"
+                            "$ref": "#/definitions/gemini.ChatRequest"
                         }
                     }
                 ],
@@ -114,19 +52,157 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.GoogleGenerativeResponse"
+                            "$ref": "#/definitions/gemini.ChatResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/gemini.ErrorResponse"
                         }
                     },
-                    "503": {
-                        "description": "Service Unavailable",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/gemini.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/gemini/generate": {
+            "post": {
+                "description": "Generate a single response from Gemini",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Gemini"
+                ],
+                "summary": "Generate content with Gemini",
+                "parameters": [
+                    {
+                        "description": "Generate request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/gemini.GenerateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/gemini.GenerateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/gemini.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/gemini.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/gemini/translate": {
+            "post": {
+                "description": "Translate text to a target language using Gemini",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Gemini"
+                ],
+                "summary": "Translate text with Gemini",
+                "parameters": [
+                    {
+                        "description": "Translate request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/gemini.TranslateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/gemini.GenerateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/gemini.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/gemini.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/chat/completions": {
+            "post": {
+                "description": "Accepts requests in OpenAI format",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "OpenAI Compatible"
+                ],
+                "summary": "OpenAI-compatible chat completions",
+                "parameters": [
+                    {
+                        "description": "Chat request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/openai.ChatCompletionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/openai.ChatCompletionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/openai.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/openai.ErrorResponse"
                         }
                     }
                 }
@@ -134,129 +210,244 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "models.Candidate": {
+        "gemini.ChatRequest": {
             "type": "object",
             "properties": {
-                "content": {
-                    "$ref": "#/definitions/models.Content"
+                "message": {
+                    "type": "string"
                 },
-                "finishReason": {
+                "metadata": {
+                    "$ref": "#/definitions/providers.SessionMetadata"
+                },
+                "model": {
+                    "type": "string"
+                }
+            }
+        },
+        "gemini.ChatResponse": {
+            "type": "object",
+            "properties": {
+                "history": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/providers.Message"
+                    }
+                },
+                "metadata": {
+                    "$ref": "#/definitions/providers.SessionMetadata"
+                },
+                "response": {
+                    "type": "string"
+                }
+            }
+        },
+        "gemini.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "gemini.GenerateRequest": {
+            "type": "object",
+            "properties": {
+                "files": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                }
+            }
+        },
+        "gemini.GenerateResponse": {
+            "type": "object",
+            "properties": {
+                "metadata": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "response": {
+                    "type": "string"
+                }
+            }
+        },
+        "gemini.TranslateRequest": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "target_lang": {
+                    "type": "string"
+                }
+            }
+        },
+        "openai.ChatCompletionRequest": {
+            "type": "object",
+            "properties": {
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/openai.Message"
+                    }
+                },
+                "model": {
+                    "type": "string"
+                },
+                "stream": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "openai.ChatCompletionResponse": {
+            "type": "object",
+            "properties": {
+                "choices": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/openai.Choice"
+                    }
+                },
+                "created": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "object": {
+                    "type": "string"
+                },
+                "usage": {
+                    "$ref": "#/definitions/openai.Usage"
+                }
+            }
+        },
+        "openai.Choice": {
+            "type": "object",
+            "properties": {
+                "finish_reason": {
                     "type": "string"
                 },
                 "index": {
                     "type": "integer"
                 },
-                "safetyRatings": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.SafetyRating"
-                    }
+                "message": {
+                    "$ref": "#/definitions/openai.Message"
                 }
             }
         },
-        "models.Content": {
+        "openai.Error": {
             "type": "object",
             "properties": {
-                "parts": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.Part"
-                    }
+                "code": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "openai.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "$ref": "#/definitions/openai.Error"
+                }
+            }
+        },
+        "openai.Message": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
                 },
                 "role": {
                     "type": "string"
                 }
             }
         },
-        "models.ErrorResponse": {
+        "openai.Usage": {
             "type": "object",
             "properties": {
-                "error": {
+                "completion_tokens": {
+                    "type": "integer"
+                },
+                "prompt_tokens": {
+                    "type": "integer"
+                },
+                "total_tokens": {
+                    "type": "integer"
+                }
+            }
+        },
+        "providers.Image": {
+            "type": "object",
+            "properties": {
+                "alt_text": {
+                    "type": "string"
+                },
+                "height": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "width": {
+                    "type": "integer"
+                }
+            }
+        },
+        "providers.Message": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "images": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/providers.Image"
+                    }
+                },
+                "role": {
+                    "description": "\"user\" or \"model\"",
+                    "type": "string"
+                }
+            }
+        },
+        "providers.SessionMetadata": {
+            "type": "object",
+            "properties": {
+                "choice_id": {
+                    "type": "string"
+                },
+                "conversation_id": {
+                    "type": "string"
+                },
+                "extra": {
                     "type": "object",
-                    "properties": {
-                        "code": {
-                            "type": "integer"
-                        },
-                        "message": {
-                            "type": "string"
-                        },
-                        "status": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "models.GoogleGenerativeRequest": {
-            "type": "object",
-            "properties": {
-                "contents": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.Content"
-                    }
-                }
-            }
-        },
-        "models.GoogleGenerativeResponse": {
-            "type": "object",
-            "properties": {
-                "candidates": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.Candidate"
-                    }
+                    "additionalProperties": {}
                 },
-                "promptFeedback": {
-                    "$ref": "#/definitions/models.PromptFeedback"
-                }
-            }
-        },
-        "models.Part": {
-            "type": "object",
-            "properties": {
-                "text": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.PromptFeedback": {
-            "type": "object",
-            "properties": {
-                "safetyRatings": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.SafetyRating"
-                    }
-                }
-            }
-        },
-        "models.SafetyRating": {
-            "type": "object",
-            "properties": {
-                "category": {
+                "model": {
                     "type": "string"
                 },
-                "probability": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.SimpleChatRequest": {
-            "type": "object",
-            "properties": {
-                "cookies": {
-                    "type": "object",
-                    "properties": {
-                        "__Secure-1PSID": {
-                            "type": "string"
-                        },
-                        "__Secure-1PSIDTS": {
-                            "type": "string"
-                        }
-                    }
-                },
-                "message": {
+                "response_id": {
                     "type": "string"
                 }
             }
@@ -268,10 +459,10 @@ const docTemplate = `{
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "localhost:3000",
-	BasePath:         "/api/v1",
+	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "AI Bridges API",
-	Description:      "WebAI-to-API service for Go - Bridge Web interfaces of AI assistants to standard APIs",
+	Description:      "WebAI-to-API service for Go - Convert web-based AI services to REST APIs",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

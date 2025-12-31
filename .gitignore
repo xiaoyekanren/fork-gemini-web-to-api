@@ -25,10 +25,17 @@ go.work
 go.work.sum
 guide.md
 
+# config file
+config.yml
 
+# cookies
+.cookies/
 
 # env file
 .env
+
+# server
+./server
 
 # Editor/IDE
 .idea/
