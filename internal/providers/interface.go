@@ -21,6 +21,9 @@ type Provider interface {
 	
 	// IsHealthy checks if the provider is ready to serve requests
 	IsHealthy() bool
+
+	// ListModels returns models supported by this provider
+	ListModels() []ModelInfo
 }
 
 // ChatSession represents a multi-turn conversation

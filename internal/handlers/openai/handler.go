@@ -1,6 +1,8 @@
 package openai
 
 import (
+	"bufio"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -21,6 +23,69 @@ func NewHandler(client *gemini.Client) *Handler {
 	}
 }
 
+// HandleModels returns the list of supported models
+// @Summary List models
+// @Description Returns a list of models supported by this server
+// @Tags OpenAI Compatible
+// @Accept json
+// @Produce json
+// @Success 200 {object} ModelListResponse
+// @Router /v1/models [get]
+func (h *Handler) HandleModels(c *fiber.Ctx) error {
+	availableModels := h.client.ListModels()
+
+	var data []ModelData
+	for _, m := range availableModels {
+		data = append(data, ModelData{
+			ID:      m.ID,
+			Object:  "model",
+			Created: m.Created,
+			OwnedBy: m.OwnedBy,
+		})
+	}
+
+	return c.JSON(ModelListResponse{
+		Object: "list",
+		Data:   data,
+	})
+}
+
+// HandleEmbeddings converts text to vector numbers
+// @Summary Create embeddings
+// @Description Converts input text to vector embeddings (Placeholder)
+// @Tags OpenAI Compatible
+// @Accept json
+// @Produce json
+// @Param request body EmbeddingsRequest true "Embeddings request"
+// @Success 200 {object} EmbeddingsResponse
+// @Router /v1/embeddings [post]
+func (h *Handler) HandleEmbeddings(c *fiber.Ctx) error {
+	var req EmbeddingsRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
+			Error: Error{Message: "Invalid request body", Type: "invalid_request_error"},
+		})
+	}
+
+	// Just return a zero vector of size 1536 (OpenAI standard) as a placeholder
+	// In a real scenario, we would use Gemini's embedding API.
+	vector := make([]float32, 1536)
+	
+	return c.JSON(EmbeddingsResponse{
+		Object: "list",
+		Data: []Embedding{
+			{
+				Object:    "embedding",
+				Index:     0,
+				Embedding: vector,
+			},
+		},
+		Model: req.Model,
+		Usage: Usage{PromptTokens: 0, TotalTokens: 0},
+	})
+}
+
+// HandleChatCompletions accepts requests in OpenAI format
 // @Summary OpenAI-compatible chat completions
 // @Description Accepts requests in OpenAI format
 // @Tags OpenAI Compatible
@@ -32,6 +97,12 @@ func NewHandler(client *gemini.Client) *Handler {
 // @Failure 500 {object} ErrorResponse
 // @Router /v1/chat/completions [post]
 func (h *Handler) HandleChatCompletions(c *fiber.Ctx) error {
+	// 1. Handle Authorization (accept but not strictly required for internal use)
+	authHeader := c.Get("Authorization")
+	if !strings.HasPrefix(authHeader, "Bearer ") && authHeader != "" {
+		// Log warning or handle as needed
+	}
+
 	var req ChatCompletionRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
@@ -43,59 +114,120 @@ func (h *Handler) HandleChatCompletions(c *fiber.Ctx) error {
 		})
 	}
 
-	// Build context from history
+	// 2. Build prompt from messages
 	var promptBuilder strings.Builder
 	for _, msg := range req.Messages {
 		role := "User"
-		if msg.Role == "assistant" || msg.Role == "model" {
+		if strings.EqualFold(msg.Role, "assistant") || strings.EqualFold(msg.Role, "model") {
 			role = "Model"
-		} else if msg.Role == "system" {
+		} else if strings.EqualFold(msg.Role, "system") {
 			role = "System"
 		}
-		
-		// For the last message (current user query), we don't need the prefix if we want it native,
-		// but providing a structured dialogue format is often safer for context.
-		// However, simple concatenation works best for Gemini logic:
 		promptBuilder.WriteString(fmt.Sprintf("%s: %s\n", role, msg.Content))
 	}
 	
-	// The prompt is the entire conversation
 	prompt := promptBuilder.String()
-
 	if prompt == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
-			Error: Error{
-				Message: "No messages found",
-				Type:    "invalid_request_error",
-				Code:    "empty_messages",
-			},
+			Error: Error{Message: "No messages found", Type: "invalid_request_error"},
 		})
 	}
 
-	// Generate response using shared client
-	// We use the accumulated prompt as the single message input.
-	// Gemini handles long context well.
 	opts := []providers.GenerateOption{}
 	if req.Model != "" {
 		opts = append(opts, providers.WithModel(req.Model))
 	}
+	if req.MaxTokens > 0 {
+		// Note: The interface might need updating if we want to pass these to the provider
+	}
 
+	// 3. Handle Streaming
+	if req.Stream {
+		c.Set("Content-Type", "text/event-stream")
+		c.Set("Cache-Control", "no-cache")
+		c.Set("Connection", "keep-alive")
+		c.Set("Transfer-Encoding", "chunked")
+
+		c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+			response, err := h.client.GenerateContent(c.Context(), prompt, opts...)
+			if err != nil {
+				errData, _ := json.Marshal(ErrorResponse{Error: Error{Message: err.Error()}})
+				fmt.Fprintf(w, "data: %s\n\n", string(errData))
+				w.Flush()
+				return
+			}
+
+			// We don't have real-time streaming from the web client yet,
+			// so we simulate it by sending the full response in one chunk for now,
+			// or we could split by words. Let's split by words for a better "AI feel".
+			words := strings.Split(response.Text, " ")
+			id := fmt.Sprintf("chatcmpl-%d", time.Now().Unix())
+			created := time.Now().Unix()
+
+			for i, word := range words {
+				content := word
+				if i < len(words)-1 {
+					content += " "
+				}
+
+				chunk := ChatCompletionChunk{
+					ID:      id,
+					Object:  "chat.completion.chunk",
+					Created: created,
+					Model:   req.Model,
+					Choices: []ChunkChoice{
+						{
+							Index: 0,
+							Delta: Delta{Content: content},
+						},
+					},
+				}
+				
+				data, _ := json.Marshal(chunk)
+				fmt.Fprintf(w, "data: %s\n\n", string(data))
+				w.Flush()
+				
+				// Small delay to simulate streaming
+				time.Sleep(20 * time.Millisecond)
+			}
+
+			// Send final chunk with finish_reason
+			finalChunk := ChatCompletionChunk{
+				ID:      id,
+				Object:  "chat.completion.chunk",
+				Created: created,
+				Model:   req.Model,
+				Choices: []ChunkChoice{
+					{
+						Index:        0,
+						Delta:        Delta{},
+						FinishReason: "stop",
+					},
+				},
+			}
+			finalData, _ := json.Marshal(finalChunk)
+			fmt.Fprintf(w, "data: %s\n\n", string(finalData))
+			fmt.Fprintf(w, "data: [DONE]\n\n")
+			w.Flush()
+		})
+		return nil
+	}
+
+	// 4. Non-streaming response
 	response, err := h.client.GenerateContent(c.Context(), prompt, opts...)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(ErrorResponse{
 			Error: Error{
 				Message: "Generation failed: " + err.Error(),
 				Type:    "api_error",
-				Code:    "generation_failed",
 			},
 		})
 	}
 
-	// Convert to OpenAI format
-	return c.JSON(h.convertToOpenAIFormat(response, req.Model, req.Stream))
+	return c.JSON(h.convertToOpenAIFormat(response, req.Model))
 }
 
-func (h *Handler) convertToOpenAIFormat(response *providers.Response, model string, stream bool) ChatCompletionResponse {
+func (h *Handler) convertToOpenAIFormat(response *providers.Response, model string) ChatCompletionResponse {
 	return ChatCompletionResponse{
 		ID:      fmt.Sprintf("chatcmpl-%d", time.Now().Unix()),
 		Object:  "chat.completion",
