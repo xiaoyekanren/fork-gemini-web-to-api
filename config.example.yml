@@ -1,8 +1,8 @@
 gemini:
-  __Secure-1PSID: ""
-  __Secure-1PSIDTS: ""
-  __Secure-1PSIDCC: ""
-  refresh_interval: 5 # minutes
+  GEMINI_1PSID: ""
+  GEMINI_1PSIDTS: ""
+  GEMINI_1PSIDCC: ""
+  GEMINI_REFRESH_INTERVAL: 1440 # Minutes
 
 server:
-  port: 3000
+  PORT: 3000

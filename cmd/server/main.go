@@ -82,12 +82,7 @@ func main() {
 	}()
 
 	// Start server
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "3000"
-	}
-
-	if err := srv.Start(":" + port); err != nil {
+	if err := srv.Start(":" + cfg.Server.Port); err != nil {
 		logger.Fatal("Server error", zap.Error(err))
 	}
 }

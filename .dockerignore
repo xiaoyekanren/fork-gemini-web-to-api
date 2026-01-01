@@ -1,0 +1,8 @@
+.git
+.cookies
+config.yml
+Dockerfile
+README.md
+vendor/
+bin/
+*.log

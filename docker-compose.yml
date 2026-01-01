@@ -1,0 +1,14 @@
+services:
+  ai-bridges:
+    build: .
+    image: ai-bridges:latest
+    container_name: ai-bridges
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - GEMINI_1PSID=g.a0005Ah9OagViocbafxY0d_1oqOZ2gLN5Si1qccJlW9Y_6W2P3BtNPuhcQzsXWMlOTwQXKwkjgACgYKARASARMSFQHGX2MiGeMbY4y0bVIB29dH-k6sfBoVAUF8yKreiq7HU09sWrorGzO01EtX0076
+      - GEMINI_1PSIDTS=sidts-CjEBflaCdRmAR_vFm-PtjE9t98ffxSh_WQEePwGmRE2EhvN-Zlu7a3yozw06F9-2UcEXEAA
+      - GEMINI_1PSIDCC=AKEyXzWEtAGrm5KXbYN9HLSAO3iuWIDDFP-fBHCJXDBlBEaPVoSUNgJ9SKHpwGO4-Ezo6yB4bQ
+      - GEMINI_REFRESH_INTERVAL=30
+    restart: unless-stopped
