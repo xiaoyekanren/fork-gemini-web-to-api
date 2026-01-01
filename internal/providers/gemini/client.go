@@ -459,6 +459,16 @@ func (c *Client) IsHealthy() bool {
 	return c.healthy
 }
 
+func (c *Client) ListModels() []providers.ModelInfo {
+	var models []providers.ModelInfo
+	for _, m := range providers.SupportedModels {
+		if m.Provider == "gemini" {
+			models = append(models, m)
+		}
+	}
+	return models
+}
+
 // parseResponse parses Gemini's response format
 func (c *Client) parseResponse(text string) (*providers.Response, error) {
 	lines := strings.Split(text, "\n")

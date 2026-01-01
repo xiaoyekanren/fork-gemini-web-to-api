@@ -9,16 +9,7 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "termsOfService": "http://swagger.io/terms/",
-        "contact": {
-            "name": "API Support",
-            "url": "http://www.swagger.io/support",
-            "email": "support@swagger.io"
-        },
-        "license": {
-            "name": "MIT",
-            "url": "https://opensource.org/licenses/MIT"
-        },
+        "contact": {},
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
@@ -207,6 +198,63 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/v1/embeddings": {
+            "post": {
+                "description": "Converts input text to vector embeddings (Placeholder)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "OpenAI Compatible"
+                ],
+                "summary": "Create embeddings",
+                "parameters": [
+                    {
+                        "description": "Embeddings request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/openai.EmbeddingsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/openai.EmbeddingsResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/models": {
+            "get": {
+                "description": "Returns a list of models supported by this server",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "OpenAI Compatible"
+                ],
+                "summary": "List models",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/openai.ModelListResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -292,6 +340,9 @@ const docTemplate = `{
         "openai.ChatCompletionRequest": {
             "type": "object",
             "properties": {
+                "max_tokens": {
+                    "type": "integer"
+                },
                 "messages": {
                     "type": "array",
                     "items": {
@@ -303,6 +354,9 @@ const docTemplate = `{
                 },
                 "stream": {
                     "type": "boolean"
+                },
+                "temperature": {
+                    "type": "number"
                 }
             }
         },
@@ -346,6 +400,52 @@ const docTemplate = `{
                 }
             }
         },
+        "openai.Embedding": {
+            "type": "object",
+            "properties": {
+                "embedding": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                },
+                "index": {
+                    "type": "integer"
+                },
+                "object": {
+                    "type": "string"
+                }
+            }
+        },
+        "openai.EmbeddingsRequest": {
+            "type": "object",
+            "properties": {
+                "input": {},
+                "model": {
+                    "type": "string"
+                }
+            }
+        },
+        "openai.EmbeddingsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/openai.Embedding"
+                    }
+                },
+                "model": {
+                    "type": "string"
+                },
+                "object": {
+                    "type": "string"
+                },
+                "usage": {
+                    "$ref": "#/definitions/openai.Usage"
+                }
+            }
+        },
         "openai.Error": {
             "type": "object",
             "properties": {
@@ -375,6 +475,37 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "role": {
+                    "type": "string"
+                }
+            }
+        },
+        "openai.ModelData": {
+            "type": "object",
+            "properties": {
+                "created": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "object": {
+                    "type": "string"
+                },
+                "owned_by": {
+                    "type": "string"
+                }
+            }
+        },
+        "openai.ModelListResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/openai.ModelData"
+                    }
+                },
+                "object": {
                     "type": "string"
                 }
             }

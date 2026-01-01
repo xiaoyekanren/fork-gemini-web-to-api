@@ -76,7 +76,9 @@ func (s *Server) registerRoutes() {
 
 	// OpenAI routes
 	v1Group := s.app.Group("/v1")
+	v1Group.Get("/models", s.openaiHandler.HandleModels)
 	v1Group.Post("/chat/completions", s.openaiHandler.HandleChatCompletions)
+	v1Group.Post("/embeddings", s.openaiHandler.HandleEmbeddings)
 
 	s.app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{

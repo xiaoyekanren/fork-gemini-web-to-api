@@ -53,6 +53,8 @@ definitions:
     type: object
   openai.ChatCompletionRequest:
     properties:
+      max_tokens:
+        type: integer
       messages:
         items:
           $ref: '#/definitions/openai.Message'
@@ -61,6 +63,8 @@ definitions:
         type: string
       stream:
         type: boolean
+      temperature:
+        type: number
     type: object
   openai.ChatCompletionResponse:
     properties:
@@ -88,6 +92,36 @@ definitions:
       message:
         $ref: '#/definitions/openai.Message'
     type: object
+  openai.Embedding:
+    properties:
+      embedding:
+        items:
+          type: number
+        type: array
+      index:
+        type: integer
+      object:
+        type: string
+    type: object
+  openai.EmbeddingsRequest:
+    properties:
+      input: {}
+      model:
+        type: string
+    type: object
+  openai.EmbeddingsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/openai.Embedding'
+        type: array
+      model:
+        type: string
+      object:
+        type: string
+      usage:
+        $ref: '#/definitions/openai.Usage'
+    type: object
   openai.Error:
     properties:
       code:
@@ -107,6 +141,26 @@ definitions:
       content:
         type: string
       role:
+        type: string
+    type: object
+  openai.ModelData:
+    properties:
+      created:
+        type: integer
+      id:
+        type: string
+      object:
+        type: string
+      owned_by:
+        type: string
+    type: object
+  openai.ModelListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/openai.ModelData'
+        type: array
+      object:
         type: string
     type: object
   openai.Usage:
@@ -159,16 +213,9 @@ definitions:
     type: object
 host: localhost:3000
 info:
-  contact:
-    email: support@swagger.io
-    name: API Support
-    url: http://www.swagger.io/support
+  contact: {}
   description: WebAI-to-API service for Go - Convert web-based AI services to REST
     APIs
-  license:
-    name: MIT
-    url: https://opensource.org/licenses/MIT
-  termsOfService: http://swagger.io/terms/
   title: AI Bridges API
   version: "1.0"
 paths:
@@ -290,6 +337,43 @@ paths:
           schema:
             $ref: '#/definitions/openai.ErrorResponse'
       summary: OpenAI-compatible chat completions
+      tags:
+      - OpenAI Compatible
+  /v1/embeddings:
+    post:
+      consumes:
+      - application/json
+      description: Converts input text to vector embeddings (Placeholder)
+      parameters:
+      - description: Embeddings request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/openai.EmbeddingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/openai.EmbeddingsResponse'
+      summary: Create embeddings
+      tags:
+      - OpenAI Compatible
+  /v1/models:
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of models supported by this server
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/openai.ModelListResponse'
+      summary: List models
       tags:
       - OpenAI Compatible
 swagger: "2.0"
