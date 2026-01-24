@@ -33,7 +33,6 @@
 ### Option 1: Docker Compose (Recommended)
 
 1. **Get your Gemini cookies** (one-time setup):
-
    - Go to [gemini.google.com](https://gemini.google.com) and sign in
    - Press `F12` → **Application** tab → **Cookies**
    - Copy `__Secure-1PSID` and `__Secure-1PSIDTS`
@@ -118,7 +117,7 @@ docker run -d -p 3000:3000 \
 ### Configuration Priority
 
 1. **Environment Variables** (Highest)
-2. **`config.yml`** file
+2. **`.env`** file
 3. **Defaults** (Lowest)
 
 ---
@@ -199,8 +198,8 @@ git clone https://github.com/ntthanh2603/ai-bridges.git
 cd ai-bridges
 
 # Copy and configure
-cp config.example.yml config.yml
-# Edit config.yml with your cookies
+cp .env.example .env
+# Edit .env with your cookies
 
 # Run locally
 go run cmd/server/main.go
