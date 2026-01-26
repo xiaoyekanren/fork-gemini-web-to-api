@@ -1,30 +1,31 @@
 # AI Bridges 🚀
 
-**AI Bridges** transforms web-based AI services (like Google Gemini) into standardized REST APIs. Use your favorite AI SDKs (OpenAI, Claude, Gemini) to connect to Gemini through a single, high-performance Go server.
+**AI Bridges** transforms Google Gemini web interface into a standardized REST API. Access Gemini's power without API keys - just use your cookies!
 
 [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](https://golang.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker)](https://github.com/ntthanh2603/ai-bridges/pkgs/container/ai-bridges)
+[![Gemini Web](https://img.shields.io/badge/Gemini-Web-4285F4?style=flat&logo=google)](https://gemini.google.com)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/ntthanh2603/ai-bridges/blob/main/LICENSE)
 
 ---
 
 ## 🎯 Why AI Bridges?
 
-**Problem**: You want to use Google Gemini with your existing AI tools (LangChain, OpenAI SDK, Claude SDK), but Gemini only works through their web interface or official SDK.
+**Problem**: You want to use Google Gemini's latest models, but you don't have an API key or prefer not to use one.
 
 **Solution**: AI Bridges creates a local API server that:
 
-- ✅ Accepts requests in **OpenAI**, **Claude**, or **Gemini** format
-- ✅ Forwards them to Gemini's web interface
-- ✅ Returns responses in the format you requested
+- ✅ Connects to Gemini's web interface using your browser cookies
+- ✅ Exposes a Gemini API endpoint
+- ✅ No API keys needed - just cookies from your browser
 - ✅ Handles authentication and session management automatically
 
 **Use Cases**:
 
-- Use Gemini with LangChain applications
-- Test Gemini integration without API keys
-- Build multi-model AI applications
-- Develop locally with Gemini support
+- Use Gemini without API keys
+- Test Gemini integration locally
+- Build applications leveraging Gemini's latest models
+- Develop with cookie-based authentication
 
 ---
 
@@ -33,7 +34,6 @@
 ### Option 1: Docker Compose (Recommended)
 
 1. **Get your Gemini cookies** (one-time setup):
-
    - Go to [gemini.google.com](https://gemini.google.com) and sign in
    - Press `F12` → **Application** tab → **Cookies**
    - Copy `__Secure-1PSID` and `__Secure-1PSIDTS`
@@ -50,8 +50,6 @@ services:
     ports:
       - "3000:3000"
     environment:
-    environment:
-      - PROVIDER_TYPE=gemini
       - GEMINI_1PSID=your_1psid_here
       - GEMINI_1PSIDTS=your_1psidts_here
       - GEMINI_REFRESH_INTERVAL=30
@@ -80,7 +78,6 @@ curl -X POST http://localhost:3000/openai/v1/chat/completions \
 
 ```bash
 docker run -d -p 3000:3000 \
-  -e PROVIDER_TYPE=gemini \
   -e GEMINI_1PSID="your_psid_here" \
   -e GEMINI_1PSIDTS="your_psidts_here" \
   -e GEMINI_1PSIDCC="your_psidcc_here" \
@@ -118,7 +115,7 @@ docker run -d -p 3000:3000 \
 ### Configuration Priority
 
 1. **Environment Variables** (Highest)
-2. **`config.yml`** file
+2. **`.env`** file
 3. **Defaults** (Lowest)
 
 ---
@@ -199,8 +196,8 @@ git clone https://github.com/ntthanh2603/ai-bridges.git
 cd ai-bridges
 
 # Copy and configure
-cp config.example.yml config.yml
-# Edit config.yml with your cookies
+cp .env.example .env
+# Edit .env with your cookies
 
 # Run locally
 go run cmd/server/main.go
@@ -247,6 +244,7 @@ If you find this project useful, please consider giving it a star! ⭐
 ## 🔗 Links
 
 - **GitHub**: [ntthanh2603/ai-bridges](https://github.com/ntthanh2603/ai-bridges)
+- **Gemini Web**: [gemini.google.com](https://gemini.google.com)
 - **Docker Hub**: [ghcr.io/ntthanh2603/ai-bridges](https://github.com/ntthanh2603/ai-bridges/pkgs/container/ai-bridges)
 - **Issues**: [Report a bug](https://github.com/ntthanh2603/ai-bridges/issues)
 

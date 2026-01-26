@@ -1,6 +1,7 @@
 .git
 .cookies
-config.yml
+.env
+.env.example
 Dockerfile
 README.md
 vendor/

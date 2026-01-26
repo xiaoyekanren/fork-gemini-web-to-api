@@ -4,102 +4,81 @@ import (
 	"os"
 	"strconv"
 
-	"gopkg.in/yaml.v3"
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	Providers ProvidersConfig `yaml:"providers"`
-	Gemini    GeminiConfig    `yaml:"gemini"`
-	Claude    ClaudeConfig    `yaml:"claude"`
-	OpenAI    OpenAIConfig    `yaml:"openai"`
-	Server    ServerConfig    `yaml:"server"`
-}
-
-type ProvidersConfig struct {
-	ProviderType string `yaml:"provider_type"`
+	Gemini GeminiConfig
+	Claude ClaudeConfig
+	OpenAI OpenAIConfig
+	Server ServerConfig
 }
 
 type GeminiConfig struct {
-	Secure1PSID     string `yaml:"GEMINI_1PSID"`
-	Secure1PSIDTS   string `yaml:"GEMINI_1PSIDTS"`
-	Secure1PSIDCC   string `yaml:"GEMINI_1PSIDCC"`
-	RefreshInterval int    `yaml:"GEMINI_REFRESH_INTERVAL"`
-	Cookies         string `yaml:"cookies"`
+	Secure1PSID     string
+	Secure1PSIDTS   string
+	Secure1PSIDCC   string
+	RefreshInterval int
+	Cookies         string
 }
 
 type ClaudeConfig struct {
-	APIKey  string `yaml:"CLAUDE_API_KEY"`
-	Model   string `yaml:"CLAUDE_MODEL"`
-	Cookies string `yaml:"cookies"`
+	APIKey  string
+	Model   string
+	Cookies string
 }
 
 type OpenAIConfig struct {
-	APIKey  string `yaml:"OPENAI_API_KEY"`
-	Model   string `yaml:"OPENAI_MODEL"`
-	Cookies string `yaml:"cookies"`
+	APIKey  string
+	Model   string
+	Cookies string
 }
 
 type ServerConfig struct {
-	Port string `yaml:"PORT"`
+	Port string
 }
 
 const (
 	defaultServerPort            = "3000"
 	defaultGeminiRefreshInterval = 5
-	defaultProviderType          = "gemini"
 )
 
 func New() (*Config, error) {
-	path := "config.yml"
+	// Load .env file if it exists
+	_ = godotenv.Load()
+
 	var cfg Config
-	
-	// Load from YAML
-	data, err := os.ReadFile(path)
-	if err == nil {
-		if err := yaml.Unmarshal(data, &cfg); err != nil {
-			return nil, err
-		}
-	} else if !os.IsNotExist(err) {
-		return nil, err
-	}
 
-	// Environment overrides
-	override := func(envName string, target *string) {
-		if val := os.Getenv(envName); val != "" {
-			*target = val
-		}
-	}
+	// Server
+	cfg.Server.Port = getEnv("PORT", defaultServerPort)
 
-	override("PROVIDER_TYPE", &cfg.Providers.ProviderType)
-	override("GEMINI_1PSID", &cfg.Gemini.Secure1PSID)
-	override("GEMINI_1PSIDTS", &cfg.Gemini.Secure1PSIDTS)
-	override("GEMINI_1PSIDCC", &cfg.Gemini.Secure1PSIDCC)
-	override("GEMINI_COOKIES", &cfg.Gemini.Cookies)
-	override("CLAUDE_API_KEY", &cfg.Claude.APIKey)
-	override("CLAUDE_MODEL", &cfg.Claude.Model)
-	override("CLAUDE_COOKIES", &cfg.Claude.Cookies)
-	override("OPENAI_API_KEY", &cfg.OpenAI.APIKey)
-	override("OPENAI_MODEL", &cfg.OpenAI.Model)
-	override("OPENAI_COOKIES", &cfg.OpenAI.Cookies)
-	override("PORT", &cfg.Server.Port)
-
-	if refresh := os.Getenv("GEMINI_REFRESH_INTERVAL"); refresh != "" {
-		if val, err := strconv.Atoi(refresh); err == nil {
-			cfg.Gemini.RefreshInterval = val
-		}
-	}
-
-	// Default values
-	if cfg.Server.Port == "" {
-		cfg.Server.Port = defaultServerPort
-	}
-	if cfg.Providers.ProviderType == "" {
-		cfg.Providers.ProviderType = defaultProviderType
-	}
-	if cfg.Gemini.RefreshInterval <= 0 {
-		cfg.Gemini.RefreshInterval = defaultGeminiRefreshInterval
-	}
+	// Gemini
+	cfg.Gemini.Secure1PSID = os.Getenv("GEMINI_1PSID")
+	cfg.Gemini.Secure1PSIDTS = os.Getenv("GEMINI_1PSIDTS")
+	cfg.Gemini.Secure1PSIDCC = os.Getenv("GEMINI_1PSIDCC")
+	cfg.Gemini.Cookies = os.Getenv("GEMINI_COOKIES")
+	cfg.Gemini.RefreshInterval = getEnvInt("GEMINI_REFRESH_INTERVAL", defaultGeminiRefreshInterval)
 
 	return &cfg, nil
 }
+
+func getEnv(key, defaultValue string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return defaultValue
+}
+
+func getEnvInt(key string, defaultValue int) int {
+	valueStr := os.Getenv(key)
+	if valueStr == "" {
+		return defaultValue
+	}
+	value, err := strconv.Atoi(valueStr)
+	if err != nil {
+		return defaultValue
+	}
+	return value
+}
+
 

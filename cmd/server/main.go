@@ -35,15 +35,15 @@ func main() {
 		fx.Invoke(
 			server.New,
 		),
-		fx.Invoke(func(pm *providers.ProviderManager, c *gemini.Client, cfg *config.Config, log *zap.Logger) {
+		fx.Invoke(func(pm *providers.ProviderManager, c *gemini.Client, log *zap.Logger) {
 			pm.Register("gemini", c)
 			// Initialize all providers (non-blocking, logs warnings on failure)
 			pm.InitAllProviders(context.Background())
-			// Select the provider based on config
-			if err := pm.SelectProvider(cfg.Providers.ProviderType); err != nil {
-				log.Error("Failed to select provider", zap.Error(err))
+			// Select Gemini as the provider
+			if err := pm.SelectProvider("gemini"); err != nil {
+				log.Error("Failed to select Gemini provider", zap.Error(err))
 			} else {
-				log.Debug("Active provider selected", zap.String("provider_type", cfg.Providers.ProviderType))
+				log.Debug("Gemini provider selected")
 			}
 		}),
 		fx.NopLogger, 
