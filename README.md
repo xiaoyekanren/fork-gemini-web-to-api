@@ -50,8 +50,6 @@ services:
     ports:
       - "3000:3000"
     environment:
-    environment:
-      - PROVIDER_TYPE=gemini
       - GEMINI_1PSID=your_1psid_here
       - GEMINI_1PSIDTS=your_1psidts_here
       - GEMINI_REFRESH_INTERVAL=30
@@ -80,7 +78,6 @@ curl -X POST http://localhost:3000/openai/v1/chat/completions \
 
 ```bash
 docker run -d -p 3000:3000 \
-  -e PROVIDER_TYPE=gemini \
   -e GEMINI_1PSID="your_psid_here" \
   -e GEMINI_1PSIDTS="your_psidts_here" \
   -e GEMINI_1PSIDCC="your_psidcc_here" \

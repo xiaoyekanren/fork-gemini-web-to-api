@@ -8,15 +8,10 @@ import (
 )
 
 type Config struct {
-	Providers ProvidersConfig
-	Gemini    GeminiConfig
-	Claude    ClaudeConfig
-	OpenAI    OpenAIConfig
-	Server    ServerConfig
-}
-
-type ProvidersConfig struct {
-	ProviderType string
+	Gemini GeminiConfig
+	Claude ClaudeConfig
+	OpenAI OpenAIConfig
+	Server ServerConfig
 }
 
 type GeminiConfig struct {
@@ -46,7 +41,6 @@ type ServerConfig struct {
 const (
 	defaultServerPort            = "3000"
 	defaultGeminiRefreshInterval = 5
-	defaultProviderType          = "gemini"
 )
 
 func New() (*Config, error) {
@@ -54,9 +48,6 @@ func New() (*Config, error) {
 	_ = godotenv.Load()
 
 	var cfg Config
-
-	// Provider Type
-	cfg.Providers.ProviderType = getEnv("PROVIDER_TYPE", defaultProviderType)
 
 	// Server
 	cfg.Server.Port = getEnv("PORT", defaultServerPort)
@@ -67,16 +58,6 @@ func New() (*Config, error) {
 	cfg.Gemini.Secure1PSIDCC = os.Getenv("GEMINI_1PSIDCC")
 	cfg.Gemini.Cookies = os.Getenv("GEMINI_COOKIES")
 	cfg.Gemini.RefreshInterval = getEnvInt("GEMINI_REFRESH_INTERVAL", defaultGeminiRefreshInterval)
-
-	// Claude
-	cfg.Claude.APIKey = os.Getenv("CLAUDE_API_KEY")
-	cfg.Claude.Model = os.Getenv("CLAUDE_MODEL")
-	cfg.Claude.Cookies = os.Getenv("CLAUDE_COOKIES")
-
-	// OpenAI
-	cfg.OpenAI.APIKey = os.Getenv("OPENAI_API_KEY")
-	cfg.OpenAI.Model = os.Getenv("OPENAI_MODEL")
-	cfg.OpenAI.Cookies = os.Getenv("OPENAI_COOKIES")
 
 	return &cfg, nil
 }
