@@ -1,30 +1,31 @@
 # AI Bridges 🚀
 
-**AI Bridges** transforms web-based AI services (like Google Gemini) into standardized REST APIs. Use your favorite AI SDKs (OpenAI, Claude, Gemini) to connect to Gemini through a single, high-performance Go server.
+**AI Bridges** transforms Google Gemini web interface into a standardized REST API. Access Gemini's power without API keys - just use your cookies!
 
 [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](https://golang.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker)](https://github.com/ntthanh2603/ai-bridges/pkgs/container/ai-bridges)
+[![Gemini Web](https://img.shields.io/badge/Gemini-Web-4285F4?style=flat&logo=google)](https://gemini.google.com)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/ntthanh2603/ai-bridges/blob/main/LICENSE)
 
 ---
 
 ## 🎯 Why AI Bridges?
 
-**Problem**: You want to use Google Gemini with your existing AI tools (LangChain, OpenAI SDK, Claude SDK), but Gemini only works through their web interface or official SDK.
+**Problem**: You want to use Google Gemini's latest models, but you don't have an API key or prefer not to use one.
 
 **Solution**: AI Bridges creates a local API server that:
 
-- ✅ Accepts requests in **OpenAI**, **Claude**, or **Gemini** format
-- ✅ Forwards them to Gemini's web interface
-- ✅ Returns responses in the format you requested
+- ✅ Connects to Gemini's web interface using your browser cookies
+- ✅ Exposes a Gemini API endpoint
+- ✅ No API keys needed - just cookies from your browser
 - ✅ Handles authentication and session management automatically
 
 **Use Cases**:
 
-- Use Gemini with LangChain applications
-- Test Gemini integration without API keys
-- Build multi-model AI applications
-- Develop locally with Gemini support
+- Use Gemini without API keys
+- Test Gemini integration locally
+- Build applications leveraging Gemini's latest models
+- Develop with cookie-based authentication
 
 ---
 
@@ -246,6 +247,7 @@ If you find this project useful, please consider giving it a star! ⭐
 ## 🔗 Links
 
 - **GitHub**: [ntthanh2603/ai-bridges](https://github.com/ntthanh2603/ai-bridges)
+- **Gemini Web**: [gemini.google.com](https://gemini.google.com)
 - **Docker Hub**: [ghcr.io/ntthanh2603/ai-bridges](https://github.com/ntthanh2603/ai-bridges/pkgs/container/ai-bridges)
 - **Issues**: [Report a bug](https://github.com/ntthanh2603/ai-bridges/issues)
 
