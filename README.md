@@ -1,11 +1,28 @@
-# AI Bridges 🚀
+<p align="center">
+  <img src="assets/gemini.png" width="400" alt="Gemini Logo">
+</p>
 
-**AI Bridges** transforms Google Gemini web interface into a standardized REST API. Access Gemini's power without API keys - just use your cookies!
+<p align="center">
+  <a href="https://github.com/ntthanh2603/gemini-web-to-api/releases"><img src="https://img.shields.io/github/v/release/ntthanh2603/gemini-web-to-api?style=flat-square&logo=github&color=3670ad" alt="Release"></a>
+  <a href="https://golang.org/"><img src="https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat-square&logo=go" alt="Go Version"></a>
+  <a href="https://github.com/ntthanh2603/gemini-web-to-api/pkgs/container/gemini-web-to-api"><img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker" alt="Docker"></a>
+  <a href="https://github.com/ntthanh2603/gemini-web-to-api/blob/main/LICENSE"><img src="https://img.shields.io/github/license/ntthanh2603/gemini-web-to-api?style=flat-square&color=orange" alt="License"></a>
+  <img src="https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=flat-square" alt="Maintained">
+</p>
 
-[![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](https://golang.org/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker)](https://github.com/ntthanh2603/gemini-web-to-api/pkgs/container/gemini-web-to-api)
-[![Gemini Web](https://img.shields.io/badge/Gemini-Web-4285F4?style=flat&logo=google)](https://gemini.google.com)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/ntthanh2603/gemini-web-to-api/blob/main/LICENSE)
+<p align="center">
+  <a href="https://github.com/ntthanh2603/gemini-web-to-api/stargazers"><img src="https://img.shields.io/github/stars/ntthanh2603/gemini-web-to-api?style=flat-square&color=gold&label=stars" alt="Stars"></a>
+  <a href="https://github.com/ntthanh2603/gemini-web-to-api/issues"><img src="https://img.shields.io/github/issues/ntthanh2603/gemini-web-to-api?style=flat-square&color=red&label=issues" alt="Issues"></a>
+  <a href="https://github.com/ntthanh2603/gemini-web-to-api/actions/workflows/docker-publish.yml"><img src="https://img.shields.io/github/actions/workflow/status/ntthanh2603/gemini-web-to-api/docker-publish.yml?style=flat-square&logo=github&label=build" alt="Build Status"></a>
+  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square" alt="PRs Welcome">
+</p>
+
+<h1 align="center">Gemini Web To API 🚀</h1>
+
+<p align="center">
+  <strong>AI Bridges</strong> transforms Google Gemini web interface into a standardized REST API.<br/>
+  Access Gemini's power without API keys - just use your cookies!
+</p>
 
 ---
 
@@ -64,7 +81,7 @@
      -d '{"model": "gemini-pro", "messages": [{"role": "user", "content": "Hello!"}]}'
    ```
 
-5. **Done!** Your AI bridge is running at `http://localhost:4981`
+5. **Done!** Your Gemini Web To API is running at `http://localhost:4981`
 
 ### Option 2: Docker Run
 
@@ -221,4 +238,4 @@ If you find this project useful, please consider giving it a star! ⭐
 
 ---
 
-**Made with ❤️ by the AI Bridges team**
+**Made with ❤️ by the Gemini Web To API team**
