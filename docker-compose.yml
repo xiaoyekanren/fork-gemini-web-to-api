@@ -1,8 +1,8 @@
 services:
-  ai-bridges:
+  gemini-web-to-api:
     build: .
-    image: ai-bridges:latest
-    container_name: ai-bridges
+    image: gemini-web-to-api:latest
+    container_name: gemini-web-to-api
     ports:
       - "4981:4981"
     env_file:

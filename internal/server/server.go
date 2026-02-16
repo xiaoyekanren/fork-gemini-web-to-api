@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"ai-bridges/internal/config"
-	"ai-bridges/internal/controllers"
-	"ai-bridges/internal/handlers"
-	"ai-bridges/pkg/logger"
+	"gemini-web-to-api/internal/config"
+	"gemini-web-to-api/internal/controllers"
+	"gemini-web-to-api/internal/handlers"
+	"gemini-web-to-api/pkg/logger"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -149,7 +149,7 @@ func buildApp(log *zap.Logger, geminiHandler *handlers.GeminiHandler, openaiHand
 
 		health := fiber.Map{
 			"status":    status,
-			"service":   "ai-bridges",
+			"service":   "gemini-web-to-api",
 			"timestamp": time.Now().Unix(),
 			"providers": fiber.Map{
 				"gemini": fiber.Map{

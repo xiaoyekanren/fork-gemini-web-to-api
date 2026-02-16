@@ -17,8 +17,8 @@ import (
 	"sync"
 	"time"
 
-	"ai-bridges/internal/config"
-	"ai-bridges/internal/providers"
+	"gemini-web-to-api/internal/config"
+	"gemini-web-to-api/internal/providers"
 
 	"github.com/imroc/req/v3"
 	"go.uber.org/zap"

@@ -1,4 +1,4 @@
-module ai-bridges
+module gemini-web-to-api
 
 go 1.25.1
 

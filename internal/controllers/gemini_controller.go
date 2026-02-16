@@ -3,7 +3,7 @@ package controllers
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"ai-bridges/internal/handlers"
+	"gemini-web-to-api/internal/handlers"
 )
 
 // GeminiController registers Gemini endpoints and contains Swagger annotations.

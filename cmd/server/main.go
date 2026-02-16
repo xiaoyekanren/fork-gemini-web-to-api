@@ -3,14 +3,14 @@ package main
 import (
 	"context"
 
-	"ai-bridges/internal/config"
-	"ai-bridges/internal/handlers"
-	"ai-bridges/internal/providers"
-	"ai-bridges/internal/providers/gemini"
-	"ai-bridges/internal/server"
-	"ai-bridges/pkg/logger"
+	"gemini-web-to-api/internal/config"
+	"gemini-web-to-api/internal/handlers"
+	"gemini-web-to-api/internal/providers"
+	"gemini-web-to-api/internal/providers/gemini"
+	"gemini-web-to-api/internal/server"
+	"gemini-web-to-api/pkg/logger"
 
-	_ "ai-bridges/cmd/swag/docs"
+	_ "gemini-web-to-api/cmd/swag/docs"
 
 	"go.uber.org/fx"
 	"go.uber.org/zap"
