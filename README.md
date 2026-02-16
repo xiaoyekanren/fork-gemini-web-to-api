@@ -59,20 +59,19 @@
 4. **Test it**:
 
    ```bash
-   curl -X POST http://localhost:3000/openai/v1/chat/completions \
+   curl -X POST http://localhost:4981/openai/v1/chat/completions \
      -H "Content-Type: application/json" \
      -d '{"model": "gemini-pro", "messages": [{"role": "user", "content": "Hello!"}]}'
    ```
 
-5. **Done!** Your AI bridge is running at `http://localhost:3000`
+5. **Done!** Your AI bridge is running at `http://localhost:4981`
 
 ### Option 2: Docker Run
 
 ```bash
-docker run -d -p 3000:3000 \
+docker run -d -p 4981:4981 \
   -e GEMINI_1PSID="your_psid_here" \
   -e GEMINI_1PSIDTS="your_psidts_here" \
-  -e GEMINI_1PSIDCC="your_psidcc_here" \
   -e GEMINI_REFRESH_INTERVAL=30 \
   -e APP_ENV=production \
   -v ./cookies:/home/appuser/.cookies \
@@ -104,9 +103,8 @@ docker run -d -p 3000:3000 \
 | ------------------------- | -------- | ------- | --------------------------------------- |
 | `GEMINI_1PSID`            | ✅ Yes   | -       | Main session cookie from Gemini         |
 | `GEMINI_1PSIDTS`          | ✅ Yes   | -       | Timestamp cookie (prevents auth errors) |
-| `GEMINI_1PSIDCC`          | ✅ Yes   | -       | Context cookie (optional)               |
 | `GEMINI_REFRESH_INTERVAL` | ❌ No    | 30      | Cookie rotation interval (minutes)      |
-| `PORT`                    | ❌ No    | 3000    | Server port                             |
+| `PORT`                    | ❌ No    | 4981    | Server port                             |
 
 ### Configuration Priority
 
@@ -124,7 +122,7 @@ docker run -d -p 3000:3000 \
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="http://localhost:3000/openai/v1",
+    base_url="http://localhost:4981/openai/v1",
     api_key="not-needed"
 )
 
@@ -141,7 +139,7 @@ print(response.choices[0].message.content)
 from langchain_anthropic import ChatAnthropic
 
 llm = ChatAnthropic(
-    base_url="http://localhost:3000/claude",
+    base_url="http://localhost:4981/claude",
     model="claude-3-5-sonnet-20240620",
     api_key="not-needed"
 )
@@ -158,7 +156,7 @@ import google.generativeai as genai
 genai.configure(
     api_key="not-needed",
     transport="rest",
-    client_options={"api_endpoint": "http://localhost:3000/gemini"}
+    client_options={"api_endpoint": "http://localhost:4981/gemini"}
 )
 
 model = genai.GenerativeModel("gemini-pro")
@@ -169,7 +167,7 @@ print(response.text)
 ### cURL (Direct HTTP)
 
 ```bash
-curl -X POST http://localhost:3000/openai/v1/chat/completions \
+curl -X POST http://localhost:4981/openai/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gemini-pro",
@@ -184,7 +182,7 @@ curl -X POST http://localhost:3000/openai/v1/chat/completions \
 
 ## 📘 API Documentation
 
-Once running, visit **`http://localhost:3000/swagger/index.html`** for interactive API documentation.
+Once running, visit **`http://localhost:4981/swagger/index.html`** for interactive API documentation.
 
 ![Swagger UI](assets/swagger.png)
 
