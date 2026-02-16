@@ -240,7 +240,7 @@ definitions:
       totalTokenCount:
         type: integer
     type: object
-host: localhost:3000
+host: localhost:4981
 info:
   contact: {}
   description: "\U0001F680 High-performance WebAI-to-API gateway. Seamlessly bridge

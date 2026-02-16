@@ -1,11 +1,28 @@
-# AI Bridges 🚀
+<p align="center">
+  <img src="assets/gemini.png" width="400" alt="Gemini Logo">
+</p>
 
-**AI Bridges** transforms Google Gemini web interface into a standardized REST API. Access Gemini's power without API keys - just use your cookies!
+<p align="center">
+  <a href="https://github.com/ntthanh2603/gemini-web-to-api/releases"><img src="https://img.shields.io/github/v/release/ntthanh2603/gemini-web-to-api?style=flat-square&logo=github&color=3670ad" alt="Release"></a>
+  <a href="https://golang.org/"><img src="https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat-square&logo=go" alt="Go Version"></a>
+  <a href="https://github.com/ntthanh2603/gemini-web-to-api/pkgs/container/gemini-web-to-api"><img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker" alt="Docker"></a>
+  <a href="https://github.com/ntthanh2603/gemini-web-to-api/blob/main/LICENSE"><img src="https://img.shields.io/github/license/ntthanh2603/gemini-web-to-api?style=flat-square&color=orange" alt="License"></a>
+  <img src="https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=flat-square" alt="Maintained">
+</p>
 
-[![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](https://golang.org/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker)](https://github.com/ntthanh2603/gemini-web-to-api/pkgs/container/gemini-web-to-api)
-[![Gemini Web](https://img.shields.io/badge/Gemini-Web-4285F4?style=flat&logo=google)](https://gemini.google.com)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/ntthanh2603/gemini-web-to-api/blob/main/LICENSE)
+<p align="center">
+  <a href="https://github.com/ntthanh2603/gemini-web-to-api/stargazers"><img src="https://img.shields.io/github/stars/ntthanh2603/gemini-web-to-api?style=flat-square&color=gold&label=stars" alt="Stars"></a>
+  <a href="https://github.com/ntthanh2603/gemini-web-to-api/issues"><img src="https://img.shields.io/github/issues/ntthanh2603/gemini-web-to-api?style=flat-square&color=red&label=issues" alt="Issues"></a>
+  <a href="https://github.com/ntthanh2603/gemini-web-to-api/actions/workflows/docker-publish.yml"><img src="https://img.shields.io/github/actions/workflow/status/ntthanh2603/gemini-web-to-api/docker-publish.yml?style=flat-square&logo=github&label=build" alt="Build Status"></a>
+  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square" alt="PRs Welcome">
+</p>
+
+<h1 align="center">Gemini Web To API 🚀</h1>
+
+<p align="center">
+  <strong>AI Bridges</strong> transforms Google Gemini web interface into a standardized REST API.<br/>
+  Access Gemini's power without API keys - just use your cookies!
+</p>
 
 ---
 
@@ -59,20 +76,19 @@
 4. **Test it**:
 
    ```bash
-   curl -X POST http://localhost:3000/openai/v1/chat/completions \
+   curl -X POST http://localhost:4981/openai/v1/chat/completions \
      -H "Content-Type: application/json" \
      -d '{"model": "gemini-pro", "messages": [{"role": "user", "content": "Hello!"}]}'
    ```
 
-5. **Done!** Your AI bridge is running at `http://localhost:3000`
+5. **Done!** Your Gemini Web To API is running at `http://localhost:4981`
 
 ### Option 2: Docker Run
 
 ```bash
-docker run -d -p 3000:3000 \
+docker run -d -p 4981:4981 \
   -e GEMINI_1PSID="your_psid_here" \
   -e GEMINI_1PSIDTS="your_psidts_here" \
-  -e GEMINI_1PSIDCC="your_psidcc_here" \
   -e GEMINI_REFRESH_INTERVAL=30 \
   -e APP_ENV=production \
   -v ./cookies:/home/appuser/.cookies \
@@ -104,9 +120,8 @@ docker run -d -p 3000:3000 \
 | ------------------------- | -------- | ------- | --------------------------------------- |
 | `GEMINI_1PSID`            | ✅ Yes   | -       | Main session cookie from Gemini         |
 | `GEMINI_1PSIDTS`          | ✅ Yes   | -       | Timestamp cookie (prevents auth errors) |
-| `GEMINI_1PSIDCC`          | ✅ Yes   | -       | Context cookie (optional)               |
 | `GEMINI_REFRESH_INTERVAL` | ❌ No    | 30      | Cookie rotation interval (minutes)      |
-| `PORT`                    | ❌ No    | 3000    | Server port                             |
+| `PORT`                    | ❌ No    | 4981    | Server port                             |
 
 ### Configuration Priority
 
@@ -124,7 +139,7 @@ docker run -d -p 3000:3000 \
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="http://localhost:3000/openai/v1",
+    base_url="http://localhost:4981/openai/v1",
     api_key="not-needed"
 )
 
@@ -141,7 +156,7 @@ print(response.choices[0].message.content)
 from langchain_anthropic import ChatAnthropic
 
 llm = ChatAnthropic(
-    base_url="http://localhost:3000/claude",
+    base_url="http://localhost:4981/claude",
     model="claude-3-5-sonnet-20240620",
     api_key="not-needed"
 )
@@ -158,7 +173,7 @@ import google.generativeai as genai
 genai.configure(
     api_key="not-needed",
     transport="rest",
-    client_options={"api_endpoint": "http://localhost:3000/gemini"}
+    client_options={"api_endpoint": "http://localhost:4981/gemini"}
 )
 
 model = genai.GenerativeModel("gemini-pro")
@@ -169,7 +184,7 @@ print(response.text)
 ### cURL (Direct HTTP)
 
 ```bash
-curl -X POST http://localhost:3000/openai/v1/chat/completions \
+curl -X POST http://localhost:4981/openai/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gemini-pro",
@@ -184,7 +199,7 @@ curl -X POST http://localhost:3000/openai/v1/chat/completions \
 
 ## 📘 API Documentation
 
-Once running, visit **`http://localhost:3000/swagger/index.html`** for interactive API documentation.
+Once running, visit **`http://localhost:4981/swagger/index.html`** for interactive API documentation.
 
 ![Swagger UI](assets/swagger.png)
 
@@ -223,4 +238,4 @@ If you find this project useful, please consider giving it a star! ⭐
 
 ---
 
-**Made with ❤️ by the AI Bridges team**
+**Made with ❤️ by the Gemini Web To API team**

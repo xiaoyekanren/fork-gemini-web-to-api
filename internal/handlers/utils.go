@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"ai-bridges/internal/models"
+	"gemini-web-to-api/internal/models"
 
 	"go.uber.org/zap"
 )

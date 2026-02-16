@@ -3,7 +3,7 @@ package controllers
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"ai-bridges/internal/handlers"
+	"gemini-web-to-api/internal/handlers"
 )
 
 // ClaudeController registers Claude-compatible endpoints and contains Swagger annotations.

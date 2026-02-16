@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"ai-bridges/internal/models"
-	"ai-bridges/internal/providers"
-	"ai-bridges/internal/providers/gemini"
+	"gemini-web-to-api/internal/models"
+	"gemini-web-to-api/internal/providers"
+	"gemini-web-to-api/internal/providers/gemini"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"

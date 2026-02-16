@@ -29,6 +29,6 @@ COPY --from=builder --chown=appuser:appgroup /app/main .
 # Switch to non-root user
 USER appuser
 
-EXPOSE 3000
+EXPOSE 4981
 
 ENTRYPOINT ["./main"] 

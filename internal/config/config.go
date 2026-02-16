@@ -13,6 +13,7 @@ type Config struct {
 	Claude ClaudeConfig
 	OpenAI OpenAIConfig
 	Server ServerConfig
+	LogLevel string
 }
 
 type GeminiConfig struct {
@@ -36,12 +37,13 @@ type OpenAIConfig struct {
 }
 
 type ServerConfig struct {
-	Port string
+	Port     string
 }
 
 const (
-	defaultServerPort            = "3000"
+	defaultServerPort            = "4981"
 	defaultGeminiRefreshInterval = 5
+	defaultLogLevel              = "info"
 )
 
 func New() (*Config, error) {
@@ -52,11 +54,13 @@ func New() (*Config, error) {
 
 	// Server
 	cfg.Server.Port = getEnv("PORT", defaultServerPort)
+	
+	// General
+	cfg.LogLevel = getEnv("LOG_LEVEL", defaultLogLevel)
 
 	// Gemini
 	cfg.Gemini.Secure1PSID = os.Getenv("GEMINI_1PSID")
 	cfg.Gemini.Secure1PSIDTS = os.Getenv("GEMINI_1PSIDTS")
-	cfg.Gemini.Secure1PSIDCC = os.Getenv("GEMINI_1PSIDCC")
 	cfg.Gemini.Cookies = os.Getenv("GEMINI_COOKIES")
 	cfg.Gemini.RefreshInterval = getEnvInt("GEMINI_REFRESH_INTERVAL", defaultGeminiRefreshInterval)
 
@@ -79,8 +83,8 @@ func (c *Config) Validate() error {
 
 	if c.Gemini.Secure1PSID != "" {
 		// If PSID is present, we need at least one of these
-		if c.Gemini.Secure1PSIDTS == "" && c.Gemini.Secure1PSIDCC == "" && c.Gemini.Cookies == "" {
-			missingVars = append(missingVars, "GEMINI_1PSIDTS or GEMINI_1PSIDCC or GEMINI_COOKIES")
+		if c.Gemini.Secure1PSIDTS == "" {
+			missingVars = append(missingVars, "GEMINI_1PSIDTS")
 		}
 	}
 

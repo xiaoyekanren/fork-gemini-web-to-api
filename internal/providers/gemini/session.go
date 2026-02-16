@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"ai-bridges/internal/providers"
+	"gemini-web-to-api/internal/providers"
 )
 
 // ChatSession implements providers.ChatSession for Gemini

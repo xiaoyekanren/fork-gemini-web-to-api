@@ -17,8 +17,8 @@ import (
 	"sync"
 	"time"
 
-	"ai-bridges/internal/config"
-	"ai-bridges/internal/providers"
+	"gemini-web-to-api/internal/config"
+	"gemini-web-to-api/internal/providers"
 
 	"github.com/imroc/req/v3"
 	"go.uber.org/zap"
@@ -417,12 +417,17 @@ func (c *Client) GenerateContent(ctx context.Context, prompt string, options ...
 		"f.req": string(outerJSON),
 	}
 
+
+	startTime := time.Now()
 	resp, err := c.httpClient.R().
+		SetContext(ctx).
 		SetFormData(formData).
 		SetQueryParam("at", c.at).
 		Post(EndpointGenerate)
 
+	duration := time.Since(startTime)
 	if err != nil {
+		c.log.Error("Generate request failed", zap.Error(err), zap.Duration("duration", duration))
 		return nil, err
 	}
 
@@ -544,7 +549,11 @@ func (c *Client) parseResponse(text string) (*providers.Response, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("failed to parse response")
+	sample := text
+	if len(sample) > 500 {
+		sample = sample[:500]
+	}
+	return nil, fmt.Errorf("failed to parse response. Sample: %s", sample)
 }
 
 func (cs *CookieStore) ToHTTPCookies() []*http.Cookie {
