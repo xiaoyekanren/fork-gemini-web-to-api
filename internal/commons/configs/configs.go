@@ -1,4 +1,4 @@
-package config
+package configs
 
 import (
 	"fmt"
@@ -12,14 +12,13 @@ type Config struct {
 	Gemini GeminiConfig
 	Claude ClaudeConfig
 	OpenAI OpenAIConfig
-	Server ServerConfig
+	Server ServerConfig	
 	LogLevel string
 }
 
 type GeminiConfig struct {
 	Secure1PSID     string
 	Secure1PSIDTS   string
-	Secure1PSIDCC   string
 	RefreshInterval int
 	Cookies         string
 }

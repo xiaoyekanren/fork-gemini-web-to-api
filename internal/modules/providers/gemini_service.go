@@ -1,4 +1,4 @@
-package gemini
+package providers
 
 import (
 	"compress/gzip"
@@ -17,8 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"gemini-web-to-api/internal/config"
-	"gemini-web-to-api/internal/providers"
+	"gemini-web-to-api/internal/commons/configs"
 
 	"github.com/imroc/req/v3"
 	"go.uber.org/zap"
@@ -42,7 +41,6 @@ type Client struct {
 type CookieStore struct {
 	Secure1PSID   string    `json:"__Secure-1PSID"`
 	Secure1PSIDTS string    `json:"__Secure-1PSIDTS"`
-	Secure1PSIDCC string    `json:"__Secure-1PSIDCC"`
 	UpdatedAt     time.Time `json:"updated_at"`
 	mu            sync.RWMutex
 }
@@ -51,11 +49,10 @@ const (
 	defaultRefreshIntervalMinutes = 30
 )
 
-func NewClient(cfg *config.Config, log *zap.Logger) *Client {
+func NewClient(cfg *configs.Config, log *zap.Logger) *Client {
 	cookies := &CookieStore{
 		Secure1PSID:   cfg.Gemini.Secure1PSID,
 		Secure1PSIDTS: cfg.Gemini.Secure1PSIDTS,
-		Secure1PSIDCC: cfg.Gemini.Secure1PSIDCC,
 		UpdatedAt:     time.Now(),
 	}
 
@@ -83,7 +80,6 @@ func (c *Client) Init(ctx context.Context) error {
 	c.cookies.Secure1PSID = cleanCookie(c.cookies.Secure1PSID)
 	configPSIDTS := cleanCookie(c.cookies.Secure1PSIDTS) // Save original config value
 	c.cookies.Secure1PSIDTS = configPSIDTS
-	c.cookies.Secure1PSIDCC = cleanCookie(c.cookies.Secure1PSIDCC)
 
 	// Check if we should use cached cookies or clear cache
 	if c.cookies.Secure1PSID != "" {
@@ -91,7 +87,6 @@ func (c *Client) Init(ctx context.Context) error {
 		
 		// If config has a new PSIDTS that differs from cache, clear cache and use config
 		if configPSIDTS != "" && cachedTS != "" && configPSIDTS != cachedTS {
-			c.log.Info("Config has new __Secure-1PSIDTS, clearing old cache")
 			_ = c.ClearCookieCache()
 			// Keep using the config value (already set above)
 		} else if err == nil && cachedTS != "" && configPSIDTS == "" {
@@ -167,9 +162,6 @@ func (c *Client) refreshSessionToken() error {
 	// 2. Prepare full cookie string
 	cookieStr := fmt.Sprintf("%s__Secure-1PSID=%s; __Secure-1PSIDTS=%s", 
 		extraCookies, c.cookies.Secure1PSID, c.cookies.Secure1PSIDTS)
-	if c.cookies.Secure1PSIDCC != "" {
-		cookieStr += fmt.Sprintf("; __Secure-1PSIDCC=%s", c.cookies.Secure1PSIDCC)
-	}
 
 	commonHeaders := map[string]string{
 		"Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -321,9 +313,6 @@ func (c *Client) RotateCookies() error {
 	if c.cookies.Secure1PSIDTS != "" {
 		parts = append(parts, fmt.Sprintf("__Secure-1PSIDTS=%s", c.cookies.Secure1PSIDTS))
 	}
-	if c.cookies.Secure1PSIDCC != "" {
-		parts = append(parts, fmt.Sprintf("__Secure-1PSIDCC=%s", c.cookies.Secure1PSIDCC))
-	}
 	cookieStr := strings.Join(parts, "; ")
 
 	// Payload must be exactly this string
@@ -360,9 +349,6 @@ func (c *Client) RotateCookies() error {
 			// Save the new cookie to cache immediately
 			_ = c.SaveCachedCookies()
 		}
-		if cookie.Name == "__Secure-1PSIDCC" {
-			c.cookies.Secure1PSIDCC = cookie.Value
-		}
 		// Sync to req/v3 client for future calls
 		c.httpClient.SetCommonCookies(cookie)
 	}
@@ -386,11 +372,11 @@ func (c *Client) GetCookies() *CookieStore {
 	}
 }
 
-func (c *Client) GenerateContent(ctx context.Context, prompt string, options ...providers.GenerateOption) (*providers.Response, error) {
+func (c *Client) GenerateContent(ctx context.Context, prompt string, options ...GenerateOption) (*Response, error) {
 	c.reqMu.Lock()
 	defer c.reqMu.Unlock()
 
-	config := &providers.GenerateConfig{
+	config := &GenerateConfig{
 		Model: "gemini-pro", // default
 	}
 	for _, opt := range options {
@@ -438,19 +424,19 @@ func (c *Client) GenerateContent(ctx context.Context, prompt string, options ...
 	return c.parseResponse(resp.String())
 }
 
-func (c *Client) StartChat(options ...providers.ChatOption) providers.ChatSession {
-	config := &providers.ChatConfig{
+func (c *Client) StartChat(options ...ChatOption) ChatSession {
+	config := &ChatConfig{
 		Model: "gemini-pro",
 	}
 	for _, opt := range options {
 		opt(config)
 	}
 
-	return &ChatSession{
+	return &GeminiChatSession{
 		client:   c,
 		model:    config.Model,
 		metadata: config.Metadata,
-		history:  []providers.Message{},
+		history:  []Message{},
 	}
 }
 
@@ -472,9 +458,10 @@ func (c *Client) IsHealthy() bool {
 	return c.healthy
 }
 
-func (c *Client) ListModels() []providers.ModelInfo {
-	var models []providers.ModelInfo
-	for _, m := range providers.SupportedModels {
+func (c *Client) ListModels() []ModelInfo {
+	var models []ModelInfo
+	// Assuming SupportedModels is defined in this package now
+	for _, m := range SupportedModels {
 		if m.Provider == "gemini" {
 			models = append(models, m)
 		}
@@ -483,7 +470,7 @@ func (c *Client) ListModels() []providers.ModelInfo {
 }
 
 // parseResponse parses Gemini's response format
-func (c *Client) parseResponse(text string) (*providers.Response, error) {
+func (c *Client) parseResponse(text string) (*Response, error) {
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -532,7 +519,7 @@ func (c *Client) parseResponse(text string) (*providers.Response, error) {
 										}
 									}
 
-									return &providers.Response{
+									return &Response{
 										Text: resText,
 										Metadata: map[string]any{
 											"cid":  cid,
@@ -578,17 +565,6 @@ func (cs *CookieStore) ToHTTPCookies() []*http.Cookie {
 		cookies = append(cookies, &http.Cookie{
 			Name:     "__Secure-1PSIDTS",
 			Value:    cleanCookie(cs.Secure1PSIDTS),
-			Domain:   domain,
-			Path:     "/",
-			Secure:   true,
-			HttpOnly: true,
-			SameSite: http.SameSiteNoneMode,
-		})
-	}
-	if cs.Secure1PSIDCC != "" {
-		cookies = append(cookies, &http.Cookie{
-			Name:     "__Secure-1PSIDCC",
-			Value:    cleanCookie(cs.Secure1PSIDCC),
 			Domain:   domain,
 			Path:     "/",
 			Secure:   true,
@@ -665,6 +641,21 @@ func (c *Client) ClearCookieCache() error {
 		return err
 	}
 	
-	c.log.Debug("Cleared cookie cache", zap.String("file", filename))
 	return nil
+}
+
+const (
+EndpointGoogle        = "https://www.google.com"
+EndpointInit          = "https://gemini.google.com/app"
+EndpointGenerate      = "https://gemini.google.com/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"
+EndpointRotateCookies = "https://accounts.google.com/RotateCookies"
+EndpointBatchExec     = "https://gemini.google.com/_/BardChatUi/data/batchexecute"
+)
+
+var DefaultHeaders = map[string]string{
+"Content-Type":  "application/x-www-form-urlencoded;charset=utf-8",
+"Origin":        "https://gemini.google.com",
+"Referer":       "https://gemini.google.com/",
+"User-Agent":    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+"X-Same-Domain": "1",
 }
