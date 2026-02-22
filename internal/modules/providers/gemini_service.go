@@ -34,6 +34,7 @@ type Client struct {
 	autoRefresh     bool
 	refreshInterval time.Duration
 	stopRefresh     chan struct{}
+	maxRetries      int
 
 	reqMu sync.Mutex
 }
@@ -71,6 +72,7 @@ func NewClient(cfg *configs.Config, log *zap.Logger) *Client {
 		autoRefresh:     true,
 		refreshInterval: time.Duration(refreshIntervalMinutes) * time.Minute,
 		stopRefresh:     make(chan struct{}),
+		maxRetries:      cfg.Gemini.MaxRetries,
 		log:             log,
 	}
 }
@@ -430,25 +432,81 @@ func (c *Client) GenerateContent(ctx context.Context, prompt string, options ...
 		"f.req": string(outerJSON),
 	}
 
-
-	startTime := time.Now()
-	resp, err := c.httpClient.R().
-		SetContext(ctx).
-		SetFormData(formData).
-		SetQueryParam("at", c.at).
-		Post(EndpointGenerate)
-
-	duration := time.Since(startTime)
-	if err != nil {
-		c.log.Error("Generate request failed", zap.Error(err), zap.Duration("duration", duration))
-		return nil, err
+	maxAttempts := c.maxRetries
+	if maxAttempts <= 0 {
+		maxAttempts = 1
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("generate failed with status: %d", resp.StatusCode)
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		if attempt > 1 {
+			// Exponential backoff: 1s, 2s, 4s...
+			backoff := time.Duration(1<<uint(attempt-2)) * time.Second
+			c.log.Warn("Retrying GenerateContent",
+				zap.Int("attempt", attempt),
+				zap.Int("max_attempts", maxAttempts),
+				zap.Duration("backoff", backoff),
+				zap.Error(lastErr),
+			)
+			select {
+			case <-time.After(backoff):
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
+
+		startTime := time.Now()
+		resp, err := c.httpClient.R().
+			SetContext(ctx).
+			SetFormData(formData).
+			SetQueryParam("at", c.at).
+			Post(EndpointGenerate)
+
+		duration := time.Since(startTime)
+		if err != nil {
+			c.log.Warn("Generate request failed, will retry",
+				zap.Error(err),
+				zap.Duration("duration", duration),
+				zap.Int("attempt", attempt),
+			)
+			lastErr = err
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			lastErr = fmt.Errorf("generate failed with status: %d", resp.StatusCode)
+			// Only retry on 5xx (server errors), not 4xx (client errors)
+			if resp.StatusCode >= 500 {
+				c.log.Warn("Server error, will retry",
+					zap.Int("status", resp.StatusCode),
+					zap.Int("attempt", attempt),
+				)
+				continue
+			}
+			return nil, lastErr
+		}
+
+		result, parseErr := c.parseResponse(resp.String())
+		if parseErr != nil {
+			lastErr = parseErr
+			c.log.Warn("Failed to parse response, will retry",
+				zap.Error(parseErr),
+				zap.Int("attempt", attempt),
+			)
+			continue
+		}
+
+		if attempt > 1 {
+			c.log.Info("GenerateContent succeeded after retry", zap.Int("attempt", attempt))
+		}
+		return result, nil
 	}
 
-	return c.parseResponse(resp.String())
+	c.log.Error("GenerateContent failed after all attempts",
+		zap.Int("attempts", maxAttempts),
+		zap.Error(lastErr),
+	)
+	return nil, fmt.Errorf("after %d attempts: %w", maxAttempts, lastErr)
 }
 
 func (c *Client) StartChat(options ...ChatOption) ChatSession {

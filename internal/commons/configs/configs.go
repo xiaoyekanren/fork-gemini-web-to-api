@@ -20,6 +20,7 @@ type GeminiConfig struct {
 	Secure1PSID     string
 	Secure1PSIDTS   string
 	RefreshInterval int
+	MaxRetries      int
 	Cookies         string
 }
 
@@ -42,6 +43,7 @@ type ServerConfig struct {
 const (
 	defaultServerPort            = "4981"
 	defaultGeminiRefreshInterval = 5
+	defaultGeminiMaxRetries      = 3
 	defaultLogLevel              = "info"
 )
 
@@ -62,6 +64,7 @@ func New() (*Config, error) {
 	cfg.Gemini.Secure1PSIDTS = os.Getenv("GEMINI_1PSIDTS")
 	cfg.Gemini.Cookies = os.Getenv("GEMINI_COOKIES")
 	cfg.Gemini.RefreshInterval = getEnvInt("GEMINI_REFRESH_INTERVAL", defaultGeminiRefreshInterval)
+	cfg.Gemini.MaxRetries = getEnvInt("GEMINI_MAX_RETRIES", defaultGeminiMaxRetries)
 
 	// Validate configuration
 	if err := cfg.Validate(); err != nil {
