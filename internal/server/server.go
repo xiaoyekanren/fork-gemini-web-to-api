@@ -33,14 +33,23 @@ func New(log *zap.Logger) *fiber.App {
 	app.Get("/swagger/*", swaggo.HandlerDefault)
 
 	// Health check endpoint — used by Docker/K8s/cloud platforms
-	app.Get("/health", func(c fiber.Ctx) error {
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"status":  "ok",
-			"services": "gemini-web-to-api",
-		})
-	})
+	app.Get("/health", HealthCheck)
 
 	return app
+}
+
+// HealthCheck godoc
+// @Summary      Health check
+// @Description  Returns the health status of the service. Used by Docker/K8s/cloud platforms to monitor the service.
+// @Tags         System
+// @Produce      json
+// @Success      200  {object}  object{status=string,service=string}  "Service is healthy"
+// @Router       /health [get]
+func HealthCheck(c fiber.Ctx) error {
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":  "ok",
+		"service": "gemini-web-to-api",
+	})
 }
 
 // RegisterFiberLifecycle registers the Fiber app lifecycle hooks

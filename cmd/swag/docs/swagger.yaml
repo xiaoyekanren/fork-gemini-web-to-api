@@ -402,6 +402,25 @@ paths:
       summary: Stream Generate Content (Gemini)
       tags:
       - Gemini
+  /health:
+    get:
+      description: Returns the health status of the service. Used by Docker/K8s/cloud
+        platforms to monitor the service.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Service is healthy
+          schema:
+            properties:
+              service:
+                type: string
+              status:
+                type: string
+            type: object
+      summary: Health check
+      tags:
+      - System
   /openai/v1/chat/completions:
     post:
       consumes:
