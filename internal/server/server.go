@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"gemini-web-to-api/internal/commons/configs"
-	"gemini-web-to-api/pkg/logger"
 
+	"github.com/gofiber/contrib/v3/swaggo"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/recover"
@@ -27,8 +27,10 @@ func New(log *zap.Logger) *fiber.App {
 		AllowCredentials: false,
 	}))
 
-	app.Use(logger.NewMiddleware(log))
 	app.Use(recover.New())
+
+	// Swagger UI — gofiber/contrib/v3/swaggo (Fiber v3 compatible)
+	app.Get("/swagger/*", swaggo.HandlerDefault)
 
 	return app
 }
