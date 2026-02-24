@@ -1,8 +1,7 @@
 services:
-  gemini-web-to-api:
+  app:
     build: .
-    image: gemini-web-to-api:latest
-    container_name: gemini-web-to-api
+    container_name: app
     ports:
       - "4981:4981"
     env_file:
@@ -10,7 +9,6 @@ services:
     environment:
       - PORT=4981
       - APP_ENV=production
-      # Gemini Configuration
       - GEMINI_1PSID=${GEMINI_1PSID}
       - GEMINI_1PSIDTS=${GEMINI_1PSIDTS}
       - GEMINI_REFRESH_INTERVAL=30
