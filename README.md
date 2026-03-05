@@ -6,7 +6,7 @@
   <a href="https://github.com/ntthanh2603/gemini-web-to-api/releases"><img src="https://img.shields.io/github/v/release/ntthanh2603/gemini-web-to-api?style=flat-square&logo=github&color=3670ad" alt="Release"></a>
   <a href="https://golang.org/"><img src="https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat-square&logo=go" alt="Go Version"></a>
   <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker" alt="Docker"></a>
-  <a href="https://github.com/ntthanh2603/gemini-web-to-api/pkgs/container/gemini-web-to-api"><img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker" alt="Docker"></a>
+  <a href="https://github.com/ntthanh2603/gemini-web-to-api/pkgs/container/gemini-web-to-api"><img src="https://img.shields.io/badge/GHCR-Ready-2496ED?style=flat-square&logo=github" alt="GHCR"></a>
   <a href="https://github.com/ntthanh2603/gemini-web-to-api/blob/main/LICENSE"><img src="https://img.shields.io/github/license/ntthanh2603/gemini-web-to-api?style=flat-square&color=orange" alt="License"></a>
   <img src="https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=flat-square" alt="Maintained">
 </p>
@@ -20,23 +20,26 @@
 <h1 align="center">Gemini Web To API 🚀</h1>
 
 <p align="center">
-  <strong>AI Bridges</strong> transforms Google Gemini web interface into a standardized REST API.<br/>
+  Transforms Google Gemini web interface into a standardized REST API.<br/>
   Access Gemini's power without API keys — just use your cookies!
 </p>
 
 > [!NOTE]
 > This project is intended for **research and educational purposes only**. Please use responsibly and refrain from any commercial use.
 
+> [!WARNING]
+> This project is not affiliated with Google. It uses reverse-engineered web cookies and may not comply with [Google's Terms of Service](https://policies.google.com/terms). Use at your own risk — the author assumes no responsibility for any account actions or data loss.
+
 ---
 
-## 🎯 Why AI Bridges?
+## 🎯 Why Gemini Web To API?
 
 **Problem**: You want to use Google Gemini's latest models, but you don't have an API key or prefer not to use one.
 
-**Solution**: AI Bridges creates a local API server that:
+**Solution**: Creates a local API server that:
 
 - ✅ Connects to Gemini's web interface using your browser cookies
-- ✅ Exposes a Gemini-compatible API endpoint
+- ✅ Exposes OpenAI / Claude / Gemini-compatible API endpoints
 - ✅ No API keys needed — just cookies from your browser
 - ✅ Handles authentication and session management automatically
 
@@ -51,33 +54,20 @@
 
 ## ⚡ Quick Start
 
-### Step 1 — Clone the repository
+### 🐳 Option A — Docker Run (no setup required)
 
-```bash
-git clone https://github.com/ntthanh2603/gemini-web-to-api.git
-cd gemini-web-to-api
-```
+> No cloning needed — pull and run directly from the registry.
 
-### Step 2 — Choose your run method
-
-Pick whichever method suits your setup, then follow the matching setup instructions:
-
----
-
-#### 🐳 Docker Run (pre-built image)
-
-No cloning or `.env` file needed — just pass your cookie values directly via `-e` flags.
-
-**Get your cookies first:**
+**Step 1 — Get your cookies**
 
 > [!WARNING]
 > Keep these values secure and **never share or commit them** — they provide direct access to your Google account.
 
 1. Go to [gemini.google.com](https://gemini.google.com) and sign in
 2. Press `F12` → **Application** → **Storage** → **Cookies**
-3. Copy `__Secure-1PSID` and `__Secure-1PSIDTS`
+3. Copy the values of `__Secure-1PSID` and `__Secure-1PSIDTS`
 
-**Then run:**
+**Step 2 — Run**
 
 ```bash
 docker run -d -p 4981:4981 \
@@ -94,22 +84,29 @@ docker run -d -p 4981:4981 \
   ghcr.io/ntthanh2603/gemini-web-to-api:latest
 ```
 
-**Done!** Skip to [Step 3 — Test it](#step-3--test-it). 🎉
+**Done!** Jump to [Test it](#-test-it). 🎉
 
 ---
 
-#### 🐳 Docker Compose (build locally)
+### 🛠️ Option B — Build from source
 
-Best if you want to build for your specific architecture (amd64, arm64, etc.).
+> Use this if you want to build for a specific architecture (amd64, arm64, etc.) or modify the source code.
 
-**Get your cookies and configure `.env`:**
+**Step 1 — Clone the repository**
+
+```bash
+git clone https://github.com/ntthanh2603/gemini-web-to-api.git
+cd gemini-web-to-api
+```
+
+**Step 2 — Get your cookies and configure `.env`**
 
 > [!WARNING]
 > Keep these values secure and **never commit your `.env` file** — it contains credentials that provide access to your Google account.
 
 1. Go to [gemini.google.com](https://gemini.google.com) and sign in
 2. Press `F12` → **Application** → **Storage** → **Cookies**
-3. Copy `__Secure-1PSID` and `__Secure-1PSIDTS`
+3. Copy the values of `__Secure-1PSID` and `__Secure-1PSIDTS`
 4. Create your `.env` from the example:
 
    ```bash
@@ -126,33 +123,21 @@ Best if you want to build for your specific architecture (amd64, arm64, etc.).
    APP_ENV=production
    ```
 
-**Then run:**
+**Step 3 — Run**
 
-```bash
-docker compose up -d --build
-```
+Pick whichever method suits your setup:
 
-**Done!** Skip to [Step 3 — Test it](#step-3--test-it). 🎉
+| Method | Command | Requirements |
+|---|---|---|
+| 🐳 Docker Compose | `docker compose up -d --build` | Docker |
+| 🐹 Go direct | `go run cmd/server/main.go` | [Go 1.21+](https://golang.org/dl/) |
+| ⚡ Task (dev mode) | `task dev` | [Task](https://taskfile.dev) |
+
+**Done!** Jump to [Test it](#-test-it). 🎉
 
 ---
 
-#### 🐹 Go (direct)
-
-Requires [Go 1.21+](https://golang.org/dl/). Follow the same `.env` setup as Docker Compose above, then:
-
-```bash
-go run cmd/server/main.go
-```
-
-#### ⚡ Task (dev mode)
-
-Requires [Task](https://taskfile.dev). Follow the same `.env` setup as Docker Compose above, then:
-
-```bash
-task dev
-```
-
-### Step 3 — Test it
+### ✅ Test it
 
 ```bash
 curl -X POST http://localhost:4981/openai/v1/chat/completions \
@@ -160,7 +145,7 @@ curl -X POST http://localhost:4981/openai/v1/chat/completions \
   -d '{"model": "gemini-advanced", "messages": [{"role": "user", "content": "Hello!"}]}'
 ```
 
-**Done!** Your Gemini Web To API is running at `http://localhost:4981` 🎉
+Your Gemini Web To API is running at `http://localhost:4981` 🎉
 
 ---
 
@@ -298,12 +283,6 @@ If you find this project useful, please consider giving it a star! ⭐
 - **GitHub**: [ntthanh2603/gemini-web-to-api](https://github.com/ntthanh2603/gemini-web-to-api)
 - **Gemini Web**: [gemini.google.com](https://gemini.google.com)
 - **Issues**: [Report a bug](https://github.com/ntthanh2603/gemini-web-to-api/issues)
-
----
-
-## ⚖️ Disclaimer
-
-This project is not affiliated with Google. It uses reverse-engineered web cookies and may not comply with [Google's Terms of Service](https://policies.google.com/terms). Use at your own risk — the author assumes no responsibility for any account actions or data loss.
 
 ---
 
