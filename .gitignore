@@ -40,6 +40,10 @@ config.yml
 # server
 ./server
 
+# compiled binary
+gemini-web-to-api
+gemini-web-to-api.exe
+
 # Editor/IDE
 .idea/
 .vscode/
