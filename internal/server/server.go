@@ -3,19 +3,21 @@ package server
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"gemini-web-to-api/internal/commons/configs"
 
 	"github.com/gofiber/contrib/v3/swaggo"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
+	"github.com/gofiber/fiber/v3/middleware/limiter"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
 // New creates a new Fiber app instance
-func NewGeminiWebToAPI(log *zap.Logger) *fiber.App {
+func NewGeminiWebToAPI(log *zap.Logger, cfg *configs.Config) *fiber.App {
 	app := fiber.New(fiber.Config{
 		AppName: "Gemini Web To API",
 	})
@@ -28,6 +30,13 @@ func NewGeminiWebToAPI(log *zap.Logger) *fiber.App {
 	}))
 
 	app.Use(recover.New())
+
+	if cfg.RateLimit.Enabled {
+		app.Use(limiter.New(limiter.Config{
+			Max:        cfg.RateLimit.MaxRequests,
+			Expiration: time.Duration(cfg.RateLimit.WindowMs) * time.Millisecond,
+		}))
+	}
 
 	// Swagger UI — gofiber/contrib/v3/swaggo (Fiber v3 compatible)
 	app.Get("/swagger/*", swaggo.HandlerDefault)
