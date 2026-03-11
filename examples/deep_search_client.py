@@ -1,15 +1,6 @@
 import json
 import time
 import requests
-from google import genai
-
-client = genai.Client(
-    api_key="your-api-key",
-    http_options={
-        "base_url": "http://localhost:4981/gemini",
-        "api_version": "v1beta"
-    }
-)
 
 BASE = "http://localhost:4981/gemini/v1beta"
 

@@ -25,10 +25,21 @@ type GeminiController struct {
 }
 
 func NewGeminiController(service *GeminiService) *GeminiController {
+	store := newTaskStore()
+
+	// Start background job to purge old tasks periodically
+	go func() {
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+		for range ticker.C {
+			store.purgeOlderThan(24 * time.Hour)
+		}
+	}()
+
 	return &GeminiController{
 		service: service,
 		log:     zap.NewNop(), // Will be injected via wire if needed
-		store:   newTaskStore(),
+		store:   store,
 	}
 }
 
@@ -390,7 +401,9 @@ func (h *GeminiController) HandleInteractionCreate(c fiber.Ctx) error {
 
 	// ── Background (polling) mode ────────────────────────────────────────────
 	b := make([]byte, 8)
-	_, _ = rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(common.ErrorToResponse(fmt.Errorf("failed to generate task ID: %w", err), "internal_error"))
+	}
 	taskID := "task-" + hex.EncodeToString(b)
 
 	task := &researchTask{
@@ -444,3 +457,24 @@ func (g *GeminiController) Register(group fiber.Router) {
 	group.Post("/interactions", g.HandleInteractionCreate)
 	group.Get("/interactions/:id", g.HandleInteractionGet)
 }
+
+// backgroundResearch runs deep research in a goroutine and updates the task store
+func (h *GeminiController) backgroundResearch(id string, req dto.DeepResearchRequest) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+
+	result, err := h.service.DeepResearch(ctx, req)
+	if err != nil {
+		h.store.update(id, func(t *researchTask) {
+			t.Status = taskStatusFailed
+			t.Error = err.Error()
+		})
+		return
+	}
+
+	h.store.update(id, func(t *researchTask) {
+		t.Status = taskStatusCompleted
+		t.Result = result
+	})
+}
+

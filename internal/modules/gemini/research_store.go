@@ -1,7 +1,6 @@
 package gemini
 
 import (
-	"context"
 	"sync"
 	"time"
 
@@ -91,22 +90,3 @@ func taskToDTO(t *researchTask) dto.InteractionResponse {
 	return resp
 }
 
-// backgroundResearch runs deep research in a goroutine and updates the task store
-func (h *GeminiController) backgroundResearch(id string, req dto.DeepResearchRequest) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
-	defer cancel()
-
-	result, err := h.service.DeepResearch(ctx, req)
-	if err != nil {
-		h.store.update(id, func(t *researchTask) {
-			t.Status = taskStatusFailed
-			t.Error = err.Error()
-		})
-		return
-	}
-
-	h.store.update(id, func(t *researchTask) {
-		t.Status = taskStatusCompleted
-		t.Result = result
-	})
-}

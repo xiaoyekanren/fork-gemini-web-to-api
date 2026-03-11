@@ -111,6 +111,7 @@ type subResearchResult struct {
 // --------------------------------------------------------------------------
 
 func (c *Client) generatePlan(ctx context.Context, query, language, model string) (*researchPlan, error) {
+	queryJSON, _ := json.Marshal(query)
 	prompt := fmt.Sprintf(`You are a deep research planner. Given a research topic, produce a structured JSON research plan.
 
 RESEARCH TOPIC: %s
@@ -133,7 +134,7 @@ OUTPUT: valid JSON only (no markdown fences), with this exact structure:
 }
 
 Generate 4-6 targeted sub-questions that together provide comprehensive coverage.
-Answer in %s.`, query, language)
+Answer in %s.`, string(queryJSON), language)
 
 	resp, err := c.GenerateContent(ctx, prompt, WithModel(model))
 	if err != nil {
@@ -163,6 +164,7 @@ Answer in %s.`, query, language)
 // --------------------------------------------------------------------------
 
 func (c *Client) researchSubQuestion(ctx context.Context, question, language, model string) (*subResearchResult, error) {
+	questionJSON, _ := json.Marshal(question)
 	prompt := fmt.Sprintf(`You are a research specialist. Thoroughly research the following question and provide a detailed, factual answer with cited sources.
 
 QUESTION: %s
@@ -176,7 +178,7 @@ Respond with valid JSON only (no markdown fences):
   ]
 }
 
-Provide 2-4 realistic sources that would typically be consulted for this topic.`, question, language)
+Provide 2-4 realistic sources that would typically be consulted for this topic.`, string(questionJSON), language)
 
 	resp, err := c.GenerateContent(ctx, prompt, WithModel(model))
 	if err != nil {
@@ -226,11 +228,14 @@ Provide 2-4 realistic sources that would typically be consulted for this topic.`
 
 func (c *Client) synthesizeReport(ctx context.Context, query, language, model string, plan *researchPlan, subResults []*subResearchResult) (string, error) {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("RESEARCH TOPIC: %s\n\n", query))
+	queryJSON, _ := json.Marshal(query)
+	sb.WriteString(fmt.Sprintf("RESEARCH TOPIC: %s\n\n", string(queryJSON)))
 	sb.WriteString("REPORT OUTLINE: " + strings.Join(plan.Outline, " | ") + "\n\n")
 	sb.WriteString("RESEARCH FINDINGS:\n")
 	for i, r := range subResults {
-		sb.WriteString(fmt.Sprintf("\n### Finding %d: %s\n%s\n", i+1, r.Question, r.Answer))
+		questionJSON, _ := json.Marshal(r.Question)
+		answerJSON, _ := json.Marshal(r.Answer)
+		sb.WriteString(fmt.Sprintf("\n### Finding %d: %s\n%s\n", i+1, string(questionJSON), string(answerJSON)))
 	}
 
 	prompt := fmt.Sprintf(`You are a research writer. Using the research findings below, write a comprehensive, well-structured research report.
