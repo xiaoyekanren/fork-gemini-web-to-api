@@ -76,6 +76,9 @@ docker run -d -p 4981:4981 \
   -e GEMINI_REFRESH_INTERVAL=30 \
   -e GEMINI_MAX_RETRIES=3 \
   -e APP_ENV=production \
+  -e RATE_LIMIT_ENABLED=true \
+  -e RATE_LIMIT_WINDOW_MS=60000 \
+  -e RATE_LIMIT_MAX_REQUESTS=10 \
   -v ./cookies:/home/appuser/.cookies \
   --tmpfs /tmp:rw,size=512m \
   --tmpfs /home/appuser/.cache:rw,size=256m \
@@ -121,6 +124,9 @@ cd gemini-web-to-api
    GEMINI_REFRESH_INTERVAL=30
    GEMINI_MAX_RETRIES=3
    APP_ENV=production
+   RATE_LIMIT_ENABLED=true
+   RATE_LIMIT_WINDOW_MS=60000
+   RATE_LIMIT_MAX_REQUESTS=10
    ```
 
 **Step 3 — Run**
@@ -171,6 +177,9 @@ Your Gemini Web To API is running at `http://localhost:4981` 🎉
 | `GEMINI_REFRESH_INTERVAL` | ❌ No    | `30`    | Cookie rotation interval (minutes)                   |
 | `GEMINI_MAX_RETRIES`      | ❌ No    | `3`     | Max retry attempts when an API call fails            |
 | `PORT`                    | ❌ No    | `4981`  | Server port                                          |
+| `RATE_LIMIT_ENABLED`      | ❌ No    | `false` | Enable or disable rate limiting                      |
+| `RATE_LIMIT_WINDOW_MS`    | ❌ No    | `60000` | Rate limit time window in milliseconds               |
+| `RATE_LIMIT_MAX_REQUESTS` | ❌ No    | `10`    | Maximum number of requests allowed per time window   |
 
 ### Configuration Priority
 

@@ -12,8 +12,15 @@ type Config struct {
 	Gemini GeminiConfig
 	Claude ClaudeConfig
 	OpenAI OpenAIConfig
-	Server ServerConfig	
-	LogLevel string
+	Server    ServerConfig
+	RateLimit RateLimitConfig
+	LogLevel  string
+}
+
+type RateLimitConfig struct {
+	Enabled     bool
+	WindowMs    int
+	MaxRequests int
 }
 
 type GeminiConfig struct {
@@ -58,6 +65,11 @@ func New() (*Config, error) {
 	
 	// General
 	cfg.LogLevel = getEnv("LOG_LEVEL", defaultLogLevel)
+
+	// Rate Limit
+	cfg.RateLimit.Enabled = getEnvBool("RATE_LIMIT_ENABLED", false)
+	cfg.RateLimit.WindowMs = getEnvInt("RATE_LIMIT_WINDOW_MS", 60000)
+	cfg.RateLimit.MaxRequests = getEnvInt("RATE_LIMIT_MAX_REQUESTS", 10)
 
 	// Gemini
 	cfg.Gemini.Secure1PSID = os.Getenv("GEMINI_1PSID")
@@ -125,4 +137,14 @@ func getEnvInt(key string, defaultValue int) int {
 	return value
 }
 
-
+func getEnvBool(key string, defaultValue bool) bool {
+	valueStr := os.Getenv(key)
+	if valueStr == "" {
+		return defaultValue
+	}
+	value, err := strconv.ParseBool(valueStr)
+	if err != nil {
+		return defaultValue
+	}
+	return value
+}
