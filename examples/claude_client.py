@@ -7,5 +7,5 @@ llm = ChatAnthropic(
     temperature=0.7,
     api_key="abc"
 )
-response = llm.invoke("Hello!")
+response = llm.invoke("Can you introduce yourself?")
 print(response.content)

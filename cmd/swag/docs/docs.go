@@ -36,7 +36,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dto.MessageRequest"
+                            "$ref": "#/definitions/gemini-web-to-api_internal_modules_claude_dto.MessageRequest"
                         }
                     }
                 ],
@@ -84,7 +84,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dto.MessageRequest"
+                            "$ref": "#/definitions/gemini-web-to-api_internal_modules_claude_dto.MessageRequest"
                         }
                     }
                 ],
@@ -176,7 +176,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dto.DeepResearchRequest"
+                            "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.DeepResearchRequest"
                         }
                     }
                 ],
@@ -184,7 +184,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dto.DeepResearchResponse"
+                            "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.DeepResearchResponse"
                         }
                     }
                 }
@@ -207,7 +207,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dto.GeminiModelsResponse"
+                            "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.GeminiModelsResponse"
                         }
                     }
                 }
@@ -240,7 +240,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dto.GeminiGenerateRequest"
+                            "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.GeminiGenerateRequest"
                         }
                     }
                 ],
@@ -248,7 +248,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dto.GeminiGenerateResponse"
+                            "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.GeminiGenerateResponse"
                         }
                     }
                 }
@@ -281,7 +281,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dto.GeminiGenerateRequest"
+                            "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.GeminiGenerateRequest"
                         }
                     }
                 ],
@@ -344,7 +344,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dto.ChatCompletionRequest"
+                            "$ref": "#/definitions/gemini-web-to-api_internal_modules_openai_dto.ChatCompletionRequest"
                         }
                     }
                 ],
@@ -389,7 +389,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.ModelListResponse"
+                            "$ref": "#/definitions/gemini-web-to-api_internal_commons_models.ModelListResponse"
                         }
                     }
                 }
@@ -397,24 +397,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "dto.Candidate": {
-            "type": "object",
-            "properties": {
-                "content": {
-                    "$ref": "#/definitions/dto.Content"
-                },
-                "finishMessage": {
-                    "type": "string"
-                },
-                "finishReason": {
-                    "type": "string"
-                },
-                "index": {
-                    "type": "integer"
-                }
-            }
-        },
-        "dto.ChatCompletionMessage": {
+        "gemini-web-to-api_internal_commons_models.Message": {
             "type": "object",
             "properties": {
                 "content": {
@@ -425,59 +408,25 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.ChatCompletionRequest": {
-            "type": "object"
-        },
-        "dto.ChatCompletionResponse": {
+        "gemini-web-to-api_internal_commons_models.ModelData": {
             "type": "object",
             "properties": {
-                "choices": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/dto.Choice"
-                    }
-                },
                 "created": {
                     "type": "integer"
                 },
-                "id": {
+                "created_at": {
+                    "type": "integer"
+                },
+                "display_name": {
                     "type": "string"
                 },
-                "model": {
+                "id": {
                     "type": "string"
                 },
                 "object": {
                     "type": "string"
                 },
-                "usage": {
-                    "$ref": "#/definitions/models.Usage"
-                }
-            }
-        },
-        "dto.ChatCompletionResponseMessage": {
-            "type": "object",
-            "properties": {
-                "content": {
-                    "type": "string"
-                },
-                "role": {
-                    "type": "string"
-                },
-                "tool_calls": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/dto.ChatCompletionToolCall"
-                    }
-                }
-            }
-        },
-        "dto.ChatCompletionToolCall": {
-            "type": "object",
-            "properties": {
-                "function": {
-                    "$ref": "#/definitions/dto.ChatCompletionToolCallFunction"
-                },
-                "id": {
+                "owned_by": {
                     "type": "string"
                 },
                 "type": {
@@ -485,32 +434,41 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.ChatCompletionToolCallFunction": {
+        "gemini-web-to-api_internal_commons_models.ModelListResponse": {
             "type": "object",
             "properties": {
-                "arguments": {
-                    "type": "string"
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/gemini-web-to-api_internal_commons_models.ModelData"
+                    }
                 },
-                "name": {
+                "object": {
                     "type": "string"
                 }
             }
         },
-        "dto.Choice": {
+        "gemini-web-to-api_internal_commons_models.Usage": {
             "type": "object",
             "properties": {
-                "finish_reason": {
-                    "type": "string"
-                },
-                "index": {
+                "completion_tokens": {
                     "type": "integer"
                 },
-                "message": {
-                    "$ref": "#/definitions/dto.ChatCompletionResponseMessage"
+                "input_tokens": {
+                    "type": "integer"
+                },
+                "output_tokens": {
+                    "type": "integer"
+                },
+                "prompt_tokens": {
+                    "type": "integer"
+                },
+                "total_tokens": {
+                    "type": "integer"
                 }
             }
         },
-        "dto.ConfigContent": {
+        "gemini-web-to-api_internal_modules_claude_dto.ConfigContent": {
             "type": "object",
             "properties": {
                 "id": {
@@ -535,10 +493,131 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.Content": {
-            "type": "object"
+        "gemini-web-to-api_internal_modules_claude_dto.MessageRequest": {
+            "type": "object",
+            "properties": {
+                "max_tokens": {
+                    "type": "integer"
+                },
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/gemini-web-to-api_internal_commons_models.Message"
+                    }
+                },
+                "model": {
+                    "type": "string"
+                },
+                "stream": {
+                    "type": "boolean"
+                },
+                "system": {
+                    "type": "string"
+                },
+                "tool_choice": {
+                    "$ref": "#/definitions/gemini-web-to-api_internal_modules_claude_dto.ToolChoice"
+                },
+                "tools": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/gemini-web-to-api_internal_modules_claude_dto.Tool"
+                    }
+                }
+            }
         },
-        "dto.DeepResearchRequest": {
+        "gemini-web-to-api_internal_modules_claude_dto.MessageResponse": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/gemini-web-to-api_internal_modules_claude_dto.ConfigContent"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "role": {
+                    "description": "\"assistant\"",
+                    "type": "string"
+                },
+                "stop_reason": {
+                    "type": "string"
+                },
+                "type": {
+                    "description": "\"message\"",
+                    "type": "string"
+                },
+                "usage": {
+                    "$ref": "#/definitions/gemini-web-to-api_internal_commons_models.Usage"
+                }
+            }
+        },
+        "gemini-web-to-api_internal_modules_claude_dto.Tool": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "input_schema": {
+                    "description": "@SchemaType object",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "gemini-web-to-api_internal_modules_claude_dto.ToolChoice": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "description": "\"auto\", \"any\", \"tool\"",
+                    "type": "string"
+                }
+            }
+        },
+        "gemini-web-to-api_internal_modules_gemini_dto.Candidate": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.Content"
+                },
+                "finishMessage": {
+                    "type": "string"
+                },
+                "finishReason": {
+                    "type": "string"
+                },
+                "index": {
+                    "type": "integer"
+                }
+            }
+        },
+        "gemini-web-to-api_internal_modules_gemini_dto.Content": {
+            "type": "object",
+            "properties": {
+                "parts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.Part"
+                    }
+                },
+                "role": {
+                    "type": "string"
+                }
+            }
+        },
+        "gemini-web-to-api_internal_modules_gemini_dto.DeepResearchRequest": {
             "type": "object",
             "properties": {
                 "language": {
@@ -559,7 +638,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.DeepResearchResponse": {
+        "gemini-web-to-api_internal_modules_gemini_dto.DeepResearchResponse": {
             "type": "object",
             "properties": {
                 "completed_at": {
@@ -594,7 +673,7 @@ const docTemplate = `{
                     "description": "Sources used in research",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dto.ResearchSource"
+                        "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.ResearchSource"
                     }
                 },
                 "status": {
@@ -605,7 +684,7 @@ const docTemplate = `{
                     "description": "Steps of research performed",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dto.ResearchStep"
+                        "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.ResearchStep"
                     }
                 },
                 "summary": {
@@ -614,24 +693,116 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.GeminiGenerateRequest": {
-            "type": "object"
+        "gemini-web-to-api_internal_modules_gemini_dto.FunctionCall": {
+            "type": "object",
+            "properties": {
+                "args": {
+                    "description": "@SchemaType object",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
         },
-        "dto.GeminiGenerateResponse": {
+        "gemini-web-to-api_internal_modules_gemini_dto.FunctionCallingConfig": {
+            "type": "object",
+            "properties": {
+                "allowed_function_names": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "mode": {
+                    "description": "\"AUTO\", \"ANY\", \"NONE\"",
+                    "type": "string"
+                }
+            }
+        },
+        "gemini-web-to-api_internal_modules_gemini_dto.FunctionDeclaration": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parameters": {
+                    "description": "@SchemaType object",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "gemini-web-to-api_internal_modules_gemini_dto.FunctionResponse": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "response": {
+                    "description": "@SchemaType object",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "gemini-web-to-api_internal_modules_gemini_dto.GeminiGenerateRequest": {
+            "type": "object",
+            "properties": {
+                "contents": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.Content"
+                    }
+                },
+                "generationConfig": {
+                    "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.GenerationConfig"
+                },
+                "safety_settings": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "tool_config": {
+                    "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.ToolConfig"
+                },
+                "tools": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.Tool"
+                    }
+                }
+            }
+        },
+        "gemini-web-to-api_internal_modules_gemini_dto.GeminiGenerateResponse": {
             "type": "object",
             "properties": {
                 "candidates": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dto.Candidate"
+                        "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.Candidate"
                     }
                 },
                 "usageMetadata": {
-                    "$ref": "#/definitions/dto.UsageMetadata"
+                    "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.UsageMetadata"
                 }
             }
         },
-        "dto.GeminiModel": {
+        "gemini-web-to-api_internal_modules_gemini_dto.GeminiModel": {
             "type": "object",
             "properties": {
                 "description": {
@@ -654,18 +825,35 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.GeminiModelsResponse": {
+        "gemini-web-to-api_internal_modules_gemini_dto.GeminiModelsResponse": {
             "type": "object",
             "properties": {
                 "models": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dto.GeminiModel"
+                        "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.GeminiModel"
                     }
                 }
             }
         },
-        "dto.InlineData": {
+        "gemini-web-to-api_internal_modules_gemini_dto.GenerationConfig": {
+            "type": "object",
+            "properties": {
+                "maxOutputTokens": {
+                    "type": "integer"
+                },
+                "temperature": {
+                    "type": "number"
+                },
+                "topK": {
+                    "type": "integer"
+                },
+                "topP": {
+                    "type": "number"
+                }
+            }
+        },
+        "gemini-web-to-api_internal_modules_gemini_dto.InlineData": {
             "type": "object",
             "properties": {
                 "data": {
@@ -676,41 +864,24 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.MessageRequest": {
-            "type": "object"
-        },
-        "dto.MessageResponse": {
+        "gemini-web-to-api_internal_modules_gemini_dto.Part": {
             "type": "object",
             "properties": {
-                "content": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/dto.ConfigContent"
-                    }
+                "function_call": {
+                    "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.FunctionCall"
                 },
-                "id": {
+                "function_response": {
+                    "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.FunctionResponse"
+                },
+                "inline_data": {
+                    "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.InlineData"
+                },
+                "text": {
                     "type": "string"
-                },
-                "model": {
-                    "type": "string"
-                },
-                "role": {
-                    "description": "\"assistant\"",
-                    "type": "string"
-                },
-                "stop_reason": {
-                    "type": "string"
-                },
-                "type": {
-                    "description": "\"message\"",
-                    "type": "string"
-                },
-                "usage": {
-                    "$ref": "#/definitions/models.Usage"
                 }
             }
         },
-        "dto.ResearchSource": {
+        "gemini-web-to-api_internal_modules_gemini_dto.ResearchSource": {
             "type": "object",
             "properties": {
                 "domain": {
@@ -731,7 +902,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.ResearchStep": {
+        "gemini-web-to-api_internal_modules_gemini_dto.ResearchStep": {
             "type": "object",
             "properties": {
                 "description": {
@@ -756,7 +927,26 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.UsageMetadata": {
+        "gemini-web-to-api_internal_modules_gemini_dto.Tool": {
+            "type": "object",
+            "properties": {
+                "function_declarations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.FunctionDeclaration"
+                    }
+                }
+            }
+        },
+        "gemini-web-to-api_internal_modules_gemini_dto.ToolConfig": {
+            "type": "object",
+            "properties": {
+                "function_calling_config": {
+                    "$ref": "#/definitions/gemini-web-to-api_internal_modules_gemini_dto.FunctionCallingConfig"
+                }
+            }
+        },
+        "gemini-web-to-api_internal_modules_gemini_dto.UsageMetadata": {
             "type": "object",
             "properties": {
                 "candidatesTokenCount": {
@@ -770,7 +960,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.Message": {
+        "gemini-web-to-api_internal_modules_openai_dto.ChatCompletionMessage": {
             "type": "object",
             "properties": {
                 "content": {
@@ -781,25 +971,92 @@ const docTemplate = `{
                 }
             }
         },
-        "models.ModelData": {
+        "gemini-web-to-api_internal_modules_openai_dto.ChatCompletionRequest": {
             "type": "object",
             "properties": {
+                "max_tokens": {
+                    "type": "integer"
+                },
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/gemini-web-to-api_internal_modules_openai_dto.ChatCompletionMessage"
+                    }
+                },
+                "model": {
+                    "type": "string"
+                },
+                "stream": {
+                    "type": "boolean"
+                },
+                "temperature": {
+                    "type": "number"
+                },
+                "tool_choice": {
+                    "description": "@SchemaType object",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "tools": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/gemini-web-to-api_internal_modules_openai_dto.ToolDefinition"
+                    }
+                }
+            }
+        },
+        "gemini-web-to-api_internal_modules_openai_dto.ChatCompletionResponse": {
+            "type": "object",
+            "properties": {
+                "choices": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/gemini-web-to-api_internal_modules_openai_dto.Choice"
+                    }
+                },
                 "created": {
                     "type": "integer"
                 },
-                "created_at": {
-                    "type": "integer"
-                },
-                "display_name": {
+                "id": {
                     "type": "string"
                 },
-                "id": {
+                "model": {
                     "type": "string"
                 },
                 "object": {
                     "type": "string"
                 },
-                "owned_by": {
+                "usage": {
+                    "$ref": "#/definitions/gemini-web-to-api_internal_commons_models.Usage"
+                }
+            }
+        },
+        "gemini-web-to-api_internal_modules_openai_dto.ChatCompletionResponseMessage": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "tool_calls": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/gemini-web-to-api_internal_modules_openai_dto.ChatCompletionToolCall"
+                    }
+                }
+            }
+        },
+        "gemini-web-to-api_internal_modules_openai_dto.ChatCompletionToolCall": {
+            "type": "object",
+            "properties": {
+                "function": {
+                    "$ref": "#/definitions/gemini-web-to-api_internal_modules_openai_dto.ChatCompletionToolCallFunction"
+                },
+                "id": {
                     "type": "string"
                 },
                 "type": {
@@ -807,37 +1064,57 @@ const docTemplate = `{
                 }
             }
         },
-        "models.ModelListResponse": {
+        "gemini-web-to-api_internal_modules_openai_dto.ChatCompletionToolCallFunction": {
             "type": "object",
             "properties": {
-                "data": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.ModelData"
-                    }
+                "arguments": {
+                    "type": "string"
                 },
-                "object": {
+                "name": {
                     "type": "string"
                 }
             }
         },
-        "models.Usage": {
+        "gemini-web-to-api_internal_modules_openai_dto.Choice": {
             "type": "object",
             "properties": {
-                "completion_tokens": {
+                "finish_reason": {
+                    "type": "string"
+                },
+                "index": {
                     "type": "integer"
                 },
-                "input_tokens": {
-                    "type": "integer"
+                "message": {
+                    "$ref": "#/definitions/gemini-web-to-api_internal_modules_openai_dto.ChatCompletionResponseMessage"
+                }
+            }
+        },
+        "gemini-web-to-api_internal_modules_openai_dto.ToolDefinition": {
+            "type": "object",
+            "properties": {
+                "function": {
+                    "$ref": "#/definitions/gemini-web-to-api_internal_modules_openai_dto.ToolFunctionDefinition"
                 },
-                "output_tokens": {
-                    "type": "integer"
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "gemini-web-to-api_internal_modules_openai_dto.ToolFunctionDefinition": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
                 },
-                "prompt_tokens": {
-                    "type": "integer"
+                "name": {
+                    "type": "string"
                 },
-                "total_tokens": {
-                    "type": "integer"
+                "parameters": {
+                    "description": "@SchemaType object",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         }

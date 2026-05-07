@@ -102,6 +102,7 @@ func (h *OpenAIController) HandleChatCompletions(c fiber.Ctx) error {
 				return
 			}
 			_, _ = fmt.Fprintf(w, "data: [DONE]\n\n")
+			_ = w.Flush()
 		})
 
 		return nil

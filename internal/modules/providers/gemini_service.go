@@ -666,6 +666,10 @@ func (c *Client) ListModelsIDs() []string {
 
 // parseResponse parses Gemini's response format
 func (c *Client) parseResponse(text string) (*Response, error) {
+	var finalResText string
+	var finalMetadata map[string]any
+	found := false
+
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -714,14 +718,13 @@ func (c *Client) parseResponse(text string) (*Response, error) {
 										}
 									}
 
-									return &Response{
-										Text: resText,
-										Metadata: map[string]any{
-											"cid":  cid,
-											"rid":  rid,
-											"rcid": rcid,
-										},
-									}, nil
+									finalResText = resText
+									finalMetadata = map[string]any{
+										"cid":  cid,
+										"rid":  rid,
+										"rcid": rcid,
+									}
+									found = true
 								}
 							}
 						}
@@ -729,6 +732,13 @@ func (c *Client) parseResponse(text string) (*Response, error) {
 				}
 			}
 		}
+	}
+
+	if found {
+		return &Response{
+			Text:     finalResText,
+			Metadata: finalMetadata,
+		}, nil
 	}
 
 	sample := text

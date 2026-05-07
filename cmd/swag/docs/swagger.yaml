@@ -1,79 +1,52 @@
 basePath: /
 definitions:
-  dto.Candidate:
-    properties:
-      content:
-        $ref: '#/definitions/dto.Content'
-      finishMessage:
-        type: string
-      finishReason:
-        type: string
-      index:
-        type: integer
-    type: object
-  dto.ChatCompletionMessage:
+  gemini-web-to-api_internal_commons_models.Message:
     properties:
       content:
         type: string
       role:
         type: string
     type: object
-  dto.ChatCompletionRequest:
-    type: object
-  dto.ChatCompletionResponse:
+  gemini-web-to-api_internal_commons_models.ModelData:
     properties:
-      choices:
-        items:
-          $ref: '#/definitions/dto.Choice'
-        type: array
       created:
         type: integer
-      id:
+      created_at:
+        type: integer
+      display_name:
         type: string
-      model:
+      id:
         type: string
       object:
         type: string
-      usage:
-        $ref: '#/definitions/models.Usage'
-    type: object
-  dto.ChatCompletionResponseMessage:
-    properties:
-      content:
-        type: string
-      role:
-        type: string
-      tool_calls:
-        items:
-          $ref: '#/definitions/dto.ChatCompletionToolCall'
-        type: array
-    type: object
-  dto.ChatCompletionToolCall:
-    properties:
-      function:
-        $ref: '#/definitions/dto.ChatCompletionToolCallFunction'
-      id:
+      owned_by:
         type: string
       type:
         type: string
     type: object
-  dto.ChatCompletionToolCallFunction:
+  gemini-web-to-api_internal_commons_models.ModelListResponse:
     properties:
-      arguments:
-        type: string
-      name:
+      data:
+        items:
+          $ref: '#/definitions/gemini-web-to-api_internal_commons_models.ModelData'
+        type: array
+      object:
         type: string
     type: object
-  dto.Choice:
+  gemini-web-to-api_internal_commons_models.Usage:
     properties:
-      finish_reason:
-        type: string
-      index:
+      completion_tokens:
         type: integer
-      message:
-        $ref: '#/definitions/dto.ChatCompletionResponseMessage'
+      input_tokens:
+        type: integer
+      output_tokens:
+        type: integer
+      prompt_tokens:
+        type: integer
+      total_tokens:
+        type: integer
     type: object
-  dto.ConfigContent:
+  gemini-web-to-api_internal_modules_claude_dto.ConfigContent:
     properties:
       id:
         description: for tool_use
@@ -91,9 +64,89 @@ definitions:
         description: '"text" or "tool_use"'
         type: string
     type: object
-  dto.Content:
+  gemini-web-to-api_internal_modules_claude_dto.MessageRequest:
+    properties:
+      max_tokens:
+        type: integer
+      messages:
+        items:
+          $ref: '#/definitions/gemini-web-to-api_internal_commons_models.Message'
+        type: array
+      model:
+        type: string
+      stream:
+        type: boolean
+      system:
+        type: string
+      tool_choice:
+        $ref: '#/definitions/gemini-web-to-api_internal_modules_claude_dto.ToolChoice'
+      tools:
+        items:
+          $ref: '#/definitions/gemini-web-to-api_internal_modules_claude_dto.Tool'
+        type: array
     type: object
-  dto.DeepResearchRequest:
+  gemini-web-to-api_internal_modules_claude_dto.MessageResponse:
+    properties:
+      content:
+        items:
+          $ref: '#/definitions/gemini-web-to-api_internal_modules_claude_dto.ConfigContent'
+        type: array
+      id:
+        type: string
+      model:
+        type: string
+      role:
+        description: '"assistant"'
+        type: string
+      stop_reason:
+        type: string
+      type:
+        description: '"message"'
+        type: string
+      usage:
+        $ref: '#/definitions/gemini-web-to-api_internal_commons_models.Usage'
+    type: object
+  gemini-web-to-api_internal_modules_claude_dto.Tool:
+    properties:
+      description:
+        type: string
+      input_schema:
+        description: '@SchemaType object'
+        items:
+          type: integer
+        type: array
+      name:
+        type: string
+    type: object
+  gemini-web-to-api_internal_modules_claude_dto.ToolChoice:
+    properties:
+      name:
+        type: string
+      type:
+        description: '"auto", "any", "tool"'
+        type: string
+    type: object
+  gemini-web-to-api_internal_modules_gemini_dto.Candidate:
+    properties:
+      content:
+        $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.Content'
+      finishMessage:
+        type: string
+      finishReason:
+        type: string
+      index:
+        type: integer
+    type: object
+  gemini-web-to-api_internal_modules_gemini_dto.Content:
+    properties:
+      parts:
+        items:
+          $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.Part'
+        type: array
+      role:
+        type: string
+    type: object
+  gemini-web-to-api_internal_modules_gemini_dto.DeepResearchRequest:
     properties:
       language:
         description: Language for the response (optional, e.g. "en", "vi")
@@ -108,7 +161,7 @@ definitions:
         description: Query is the research topic or question
         type: string
     type: object
-  dto.DeepResearchResponse:
+  gemini-web-to-api_internal_modules_gemini_dto.DeepResearchResponse:
     properties:
       completed_at:
         description: CompletedAt timestamp (Unix seconds), 0 if not completed
@@ -134,7 +187,7 @@ definitions:
       sources:
         description: Sources used in research
         items:
-          $ref: '#/definitions/dto.ResearchSource'
+          $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.ResearchSource'
         type: array
       status:
         description: 'Status: "in_progress", "completed", "failed"'
@@ -142,24 +195,85 @@ definitions:
       steps:
         description: Steps of research performed
         items:
-          $ref: '#/definitions/dto.ResearchStep'
+          $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.ResearchStep'
         type: array
       summary:
         description: Summary is the synthesized research report
         type: string
     type: object
-  dto.GeminiGenerateRequest:
+  gemini-web-to-api_internal_modules_gemini_dto.FunctionCall:
+    properties:
+      args:
+        description: '@SchemaType object'
+        items:
+          type: integer
+        type: array
+      name:
+        type: string
     type: object
-  dto.GeminiGenerateResponse:
+  gemini-web-to-api_internal_modules_gemini_dto.FunctionCallingConfig:
+    properties:
+      allowed_function_names:
+        items:
+          type: string
+        type: array
+      mode:
+        description: '"AUTO", "ANY", "NONE"'
+        type: string
+    type: object
+  gemini-web-to-api_internal_modules_gemini_dto.FunctionDeclaration:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      parameters:
+        description: '@SchemaType object'
+        items:
+          type: integer
+        type: array
+    type: object
+  gemini-web-to-api_internal_modules_gemini_dto.FunctionResponse:
+    properties:
+      name:
+        type: string
+      response:
+        description: '@SchemaType object'
+        items:
+          type: integer
+        type: array
+    type: object
+  gemini-web-to-api_internal_modules_gemini_dto.GeminiGenerateRequest:
+    properties:
+      contents:
+        items:
+          $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.Content'
+        type: array
+      generationConfig:
+        $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.GenerationConfig'
+      safety_settings:
+        items:
+          additionalProperties:
+            type: string
+          type: object
+        type: array
+      tool_config:
+        $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.ToolConfig'
+      tools:
+        items:
+          $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.Tool'
+        type: array
+    type: object
+  gemini-web-to-api_internal_modules_gemini_dto.GeminiGenerateResponse:
     properties:
       candidates:
         items:
-          $ref: '#/definitions/dto.Candidate'
+          $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.Candidate'
         type: array
       usageMetadata:
-        $ref: '#/definitions/dto.UsageMetadata'
+        $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.UsageMetadata'
     type: object
-  dto.GeminiModel:
+  gemini-web-to-api_internal_modules_gemini_dto.GeminiModel:
     properties:
       description:
         type: string
@@ -174,44 +288,43 @@ definitions:
       version:
         type: string
     type: object
-  dto.GeminiModelsResponse:
+  gemini-web-to-api_internal_modules_gemini_dto.GeminiModelsResponse:
     properties:
       models:
         items:
-          $ref: '#/definitions/dto.GeminiModel'
+          $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.GeminiModel'
         type: array
     type: object
-  dto.InlineData:
+  gemini-web-to-api_internal_modules_gemini_dto.GenerationConfig:
+    properties:
+      maxOutputTokens:
+        type: integer
+      temperature:
+        type: number
+      topK:
+        type: integer
+      topP:
+        type: number
+    type: object
+  gemini-web-to-api_internal_modules_gemini_dto.InlineData:
     properties:
       data:
         type: string
       mimeType:
         type: string
     type: object
-  dto.MessageRequest:
-    type: object
-  dto.MessageResponse:
+  gemini-web-to-api_internal_modules_gemini_dto.Part:
     properties:
-      content:
-        items:
-          $ref: '#/definitions/dto.ConfigContent'
-        type: array
-      id:
+      function_call:
+        $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.FunctionCall'
+      function_response:
+        $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.FunctionResponse'
+      inline_data:
+        $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.InlineData'
+      text:
         type: string
-      model:
-        type: string
-      role:
-        description: '"assistant"'
-        type: string
-      stop_reason:
-        type: string
-      type:
-        description: '"message"'
-        type: string
-      usage:
-        $ref: '#/definitions/models.Usage'
     type: object
-  dto.ResearchSource:
+  gemini-web-to-api_internal_modules_gemini_dto.ResearchSource:
     properties:
       domain:
         description: Domain of the source
@@ -226,7 +339,7 @@ definitions:
         description: URL of the source
         type: string
     type: object
-  dto.ResearchStep:
+  gemini-web-to-api_internal_modules_gemini_dto.ResearchStep:
     properties:
       description:
         description: Description of what this step did
@@ -244,7 +357,19 @@ definitions:
         description: 'Type of step: "search", "read", "synthesize", "outline", "write"'
         type: string
     type: object
-  dto.UsageMetadata:
+  gemini-web-to-api_internal_modules_gemini_dto.Tool:
+    properties:
+      function_declarations:
+        items:
+          $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.FunctionDeclaration'
+        type: array
+    type: object
+  gemini-web-to-api_internal_modules_gemini_dto.ToolConfig:
+    properties:
+      function_calling_config:
+        $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.FunctionCallingConfig'
+    type: object
+  gemini-web-to-api_internal_modules_gemini_dto.UsageMetadata:
     properties:
       candidatesTokenCount:
         type: integer
@@ -253,51 +378,108 @@ definitions:
       totalTokenCount:
         type: integer
     type: object
-  models.Message:
+  gemini-web-to-api_internal_modules_openai_dto.ChatCompletionMessage:
     properties:
       content:
         type: string
       role:
         type: string
     type: object
-  models.ModelData:
+  gemini-web-to-api_internal_modules_openai_dto.ChatCompletionRequest:
     properties:
+      max_tokens:
+        type: integer
+      messages:
+        items:
+          $ref: '#/definitions/gemini-web-to-api_internal_modules_openai_dto.ChatCompletionMessage'
+        type: array
+      model:
+        type: string
+      stream:
+        type: boolean
+      temperature:
+        type: number
+      tool_choice:
+        description: '@SchemaType object'
+        items:
+          type: integer
+        type: array
+      tools:
+        items:
+          $ref: '#/definitions/gemini-web-to-api_internal_modules_openai_dto.ToolDefinition'
+        type: array
+    type: object
+  gemini-web-to-api_internal_modules_openai_dto.ChatCompletionResponse:
+    properties:
+      choices:
+        items:
+          $ref: '#/definitions/gemini-web-to-api_internal_modules_openai_dto.Choice'
+        type: array
       created:
         type: integer
-      created_at:
-        type: integer
-      display_name:
-        type: string
       id:
+        type: string
+      model:
         type: string
       object:
         type: string
-      owned_by:
+      usage:
+        $ref: '#/definitions/gemini-web-to-api_internal_commons_models.Usage'
+    type: object
+  gemini-web-to-api_internal_modules_openai_dto.ChatCompletionResponseMessage:
+    properties:
+      content:
+        type: string
+      role:
+        type: string
+      tool_calls:
+        items:
+          $ref: '#/definitions/gemini-web-to-api_internal_modules_openai_dto.ChatCompletionToolCall'
+        type: array
+    type: object
+  gemini-web-to-api_internal_modules_openai_dto.ChatCompletionToolCall:
+    properties:
+      function:
+        $ref: '#/definitions/gemini-web-to-api_internal_modules_openai_dto.ChatCompletionToolCallFunction'
+      id:
         type: string
       type:
         type: string
     type: object
-  models.ModelListResponse:
+  gemini-web-to-api_internal_modules_openai_dto.ChatCompletionToolCallFunction:
     properties:
-      data:
-        items:
-          $ref: '#/definitions/models.ModelData'
-        type: array
-      object:
+      arguments:
+        type: string
+      name:
         type: string
     type: object
-  models.Usage:
+  gemini-web-to-api_internal_modules_openai_dto.Choice:
     properties:
-      completion_tokens:
+      finish_reason:
+        type: string
+      index:
         type: integer
-      input_tokens:
-        type: integer
-      output_tokens:
-        type: integer
-      prompt_tokens:
-        type: integer
-      total_tokens:
-        type: integer
+      message:
+        $ref: '#/definitions/gemini-web-to-api_internal_modules_openai_dto.ChatCompletionResponseMessage'
+    type: object
+  gemini-web-to-api_internal_modules_openai_dto.ToolDefinition:
+    properties:
+      function:
+        $ref: '#/definitions/gemini-web-to-api_internal_modules_openai_dto.ToolFunctionDefinition'
+      type:
+        type: string
+    type: object
+  gemini-web-to-api_internal_modules_openai_dto.ToolFunctionDefinition:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      parameters:
+        description: '@SchemaType object'
+        items:
+          type: integer
+        type: array
     type: object
 host: localhost:4981
 info:
@@ -319,7 +501,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/dto.MessageRequest'
+          $ref: '#/definitions/gemini-web-to-api_internal_modules_claude_dto.MessageRequest'
       produces:
       - application/json
       - text/event-stream
@@ -352,7 +534,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/dto.MessageRequest'
+          $ref: '#/definitions/gemini-web-to-api_internal_modules_claude_dto.MessageRequest'
       produces:
       - application/json
       responses:
@@ -413,14 +595,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/dto.DeepResearchRequest'
+          $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.DeepResearchRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.DeepResearchResponse'
+            $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.DeepResearchResponse'
       summary: Deep Research (synchronous)
       tags:
       - Gemini
@@ -435,7 +617,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.GeminiModelsResponse'
+            $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.GeminiModelsResponse'
       summary: List Gemini Models
       tags:
       - Gemini
@@ -455,14 +637,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/dto.GeminiGenerateRequest'
+          $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.GeminiGenerateRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.GeminiGenerateResponse'
+            $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.GeminiGenerateResponse'
       summary: Generate Content (Gemini)
       tags:
       - Gemini
@@ -482,7 +664,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/dto.GeminiGenerateRequest'
+          $ref: '#/definitions/gemini-web-to-api_internal_modules_gemini_dto.GeminiGenerateRequest'
       produces:
       - application/json
       responses:
@@ -524,7 +706,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/dto.ChatCompletionRequest'
+          $ref: '#/definitions/gemini-web-to-api_internal_modules_openai_dto.ChatCompletionRequest'
       produces:
       - application/json
       - text/event-stream
@@ -557,7 +739,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.ModelListResponse'
+            $ref: '#/definitions/gemini-web-to-api_internal_commons_models.ModelListResponse'
       summary: List OpenAI Models
       tags:
       - OpenAI

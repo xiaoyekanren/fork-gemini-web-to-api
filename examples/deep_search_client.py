@@ -10,7 +10,7 @@ with requests.post(
         "input": "Compare Elasticsearch vs OpenSearch architecture and performance",
         "agent": "deep-research-pro-preview-12-2025",
         "background": True,
-        "stream": True       # ← bật streaming
+        "stream": True       # Enable streaming
     },
     stream=True,
     headers={"Accept": "text/event-stream"}
@@ -23,7 +23,7 @@ with requests.post(
         status = event.get("status", "")
 
         if status == "in_progress":
-            print(f"[...] Đang nghiên cứu...", end="\r", flush=True)
+            print(f"[...] Researching...", end="\r", flush=True)
 
         elif status == "completed":
             outputs = event.get("outputs") or []

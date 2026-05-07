@@ -4,7 +4,7 @@ tasks:
   swagger:
     desc: Generate swagger documentation
     cmds:
-      - swag init -g cmd/server/main.go -o cmd/swag/docs
+      - swag init -g cmd/server/main.go -o cmd/swag/docs --parseInternal --parseDependency
 
   run:
     desc: Run the server with auto-swagger update
