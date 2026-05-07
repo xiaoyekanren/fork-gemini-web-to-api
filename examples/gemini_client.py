@@ -11,7 +11,7 @@ client = genai.Client(
 
 response = client.models.generate_content(
     model="gemini-advanced",
-    contents="Hello?"
+    contents="Can you introduce yourself?"
 )
 
 print(response.text)

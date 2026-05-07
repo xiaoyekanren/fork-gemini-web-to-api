@@ -9,7 +9,7 @@ response = client.chat.completions.create(
         model="gemini-advanced",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": "Hello!"}
+            {"role": "user", "content": "Can you introduce yourself?"}
         ]
     )
 
