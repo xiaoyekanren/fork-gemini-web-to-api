@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"gemini-web-to-api/internal/commons/configs"
@@ -30,6 +31,9 @@ func NewGeminiWebToAPI(log *zap.Logger, cfg *configs.Config) *fiber.App {
 	}))
 
 	app.Use(recover.New())
+
+	// API Key authentication — only active when API_KEY env is set
+	app.Use(AuthMiddleware(cfg))
 
 	if cfg.RateLimit.Enabled {
 		app.Use(limiter.New(limiter.Config{
@@ -59,6 +63,39 @@ func HealthCheck(c fiber.Ctx) error {
 		"status":  "ok",
 		"service": "gemini-web-to-api",
 	})
+}
+
+// AuthMiddleware validates API key if API_KEY env is configured.
+// Skips auth for /health endpoint (always public).
+func AuthMiddleware(cfg *configs.Config) fiber.Handler {
+	return func(c fiber.Ctx) error {
+		// No API key configured — allow all requests
+		if cfg.Auth.APIKey == "" {
+			return c.Next()
+		}
+
+		// Health check is always public
+		if c.Path() == "/health" {
+			return c.Next()
+		}
+
+		// Check x-api-key header first, then Authorization: Bearer
+		key := c.Get("x-api-key")
+		if key == "" {
+			auth := c.Get("Authorization")
+			if strings.HasPrefix(auth, "Bearer ") {
+				key = auth[7:]
+			}
+		}
+
+		if key != cfg.Auth.APIKey {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "unauthorized: invalid or missing API key",
+			})
+		}
+
+		return c.Next()
+	}
 }
 
 // Register404Handler registers the 404 handler for unmatched routes

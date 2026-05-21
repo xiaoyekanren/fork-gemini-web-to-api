@@ -9,12 +9,17 @@ import (
 )
 
 type Config struct {
-	Gemini GeminiConfig
-	Claude ClaudeConfig
-	OpenAI OpenAIConfig
+	Gemini    GeminiConfig
+	Claude    ClaudeConfig
+	OpenAI    OpenAIConfig
 	Server    ServerConfig
 	RateLimit RateLimitConfig
+	Auth      AuthConfig
 	LogLevel  string
+}
+
+type AuthConfig struct {
+	APIKey string
 }
 
 type RateLimitConfig struct {
@@ -65,6 +70,9 @@ func New() (*Config, error) {
 	
 	// General
 	cfg.LogLevel = getEnv("LOG_LEVEL", defaultLogLevel)
+
+	// Auth
+	cfg.Auth.APIKey = os.Getenv("API_KEY")
 
 	// Rate Limit
 	cfg.RateLimit.Enabled = getEnvBool("RATE_LIMIT_ENABLED", false)
