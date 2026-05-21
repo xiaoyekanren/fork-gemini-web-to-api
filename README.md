@@ -19,8 +19,6 @@
 
 <h1 align="center">Gemini Web To API 🚀</h1>
 
-> **部署 & 客户端接入 → [`docs/README.md`](docs/README.md)**（编译、部署、nginx 反代、Claude Code / OpenAI / Gemini SDK 等全客户端配置）
-
 <p align="center">
   Transforms Google Gemini web interface into a standardized REST API.<br/>
   Access Gemini's power without API keys — just use your cookies!

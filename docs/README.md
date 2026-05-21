@@ -127,18 +127,18 @@ sudo systemctl status gemini-web-to-api
 
 ### 1.6 nginx 反代 + HTTPS
 
-以 `api.xiaoyekanren.com` 为例，nginx 配置（`/usr/local/nginx/conf/user_defined_config/gemini-api.conf` 或 `/etc/nginx/sites-enabled/gemini-api`）：
+以 `api.example.com` 为例，nginx 配置（`/usr/local/nginx/conf/user_defined_config/gemini-api.conf` 或 `/etc/nginx/sites-enabled/gemini-api`）：
 
 ```nginx
 server {
   listen 80;
-  server_name api.xiaoyekanren.com;
+  server_name api.example.com;
   return 301 https://$host$request_uri;
 }
 
 server {
   listen 443 ssl;
-  server_name api.xiaoyekanren.com;
+  server_name api.example.com;
 
   ssl_certificate         /path/to/fullchain.cer;
   ssl_certificate_key     /path/to/domain.key;
@@ -178,7 +178,7 @@ sudo nginx -t && sudo nginx -s reload
 
 ## 2. 各客户端接入方式
 
-> 下文中 `${BASE_URL}` 替换为实际部署地址，如 `https://api.xiaoyekanren.com`。
+> 下文中 `${BASE_URL}` 替换为实际部署地址，如 `https://api.example.com`。
 > `<YOUR_API_KEY>` 替换为 `.env` 中 `API_KEY` 的值。
 
 ### 2.1 Claude Code
