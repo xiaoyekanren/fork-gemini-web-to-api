@@ -60,6 +60,10 @@ func NewClient(cfg *configs.Config, log *zap.Logger) *Client {
 		SetTimeout(10 * time.Minute).
 		SetCommonHeaders(DefaultHeaders)
 
+	if proxyURL := os.Getenv("HTTPS_PROXY"); proxyURL != "" {
+		client.SetProxyURL(proxyURL)
+	}
+
 	refreshIntervalMinutes := cfg.Gemini.RefreshInterval
 	if refreshIntervalMinutes <= 0 {
 		refreshIntervalMinutes = defaultRefreshIntervalMinutes
@@ -315,6 +319,24 @@ func (c *Client) refreshModels(body string) {
 		}
 	}
 
+	// Add well-known models that may not appear in the initial HTML (loaded
+	// dynamically by the web UI) but are accepted by the Gemini backend.
+	knownModels := []string{
+		"gemini-3.5-flash",
+		"gemini-3.1-pro",
+	}
+	for _, id := range knownModels {
+		if !uniqueIDs[id] {
+			uniqueIDs[id] = true
+			newModels = append(newModels, ModelInfo{
+				ID:       id,
+				Created:  now,
+				OwnedBy:  "google",
+				Provider: "gemini",
+			})
+		}
+	}
+
 	c.mu.Lock()
 	c.cachedModels = newModels
 	c.mu.Unlock()
@@ -475,19 +497,14 @@ func (c *Client) GenerateContent(ctx context.Context, prompt string, options ...
 		}
 	}
 	
-	// Strictly enforce that we only use models found/confirmed from the web
-	found := false
-	for _, m := range c.cachedModels {
-		if m.ID == config.Model {
-			found = true
-			break
-		}
-	}
+	// Accept any model matching gemini-* pattern. The HTML page source only exposes
+	// a subset; newer models load dynamically and the Gemini backend accepts them.
+	modelPattern := regexp.MustCompile(`^gemini-[a-zA-Z0-9.-]+$`)
 	at := c.at
 	c.mu.RUnlock()
 
-	if !found && config.Model != "" {
-		return nil, fmt.Errorf("model '%s' is not supported or not available. Available models: %v", config.Model, c.ListModelsIDs())
+	if config.Model != "" && !modelPattern.MatchString(config.Model) {
+		return nil, fmt.Errorf("model '%s' is not a valid Gemini model ID. Available models: %v", config.Model, c.ListModelsIDs())
 	}
 
 	if at == "" {
@@ -668,6 +685,7 @@ func (c *Client) ListModelsIDs() []string {
 func (c *Client) parseResponse(text string) (*Response, error) {
 	var finalResText string
 	var finalMetadata map[string]any
+	var finalImages []Image
 	found := false
 
 	lines := strings.Split(text, "\n")
@@ -703,9 +721,26 @@ func (c *Client) parseResponse(text string) (*Response, error) {
 						if ok && len(firstCandidate) >= 2 {
 							contentParts, ok := firstCandidate[1].([]interface{})
 							if ok && len(contentParts) > 0 {
-								resText, ok := contentParts[0].(string)
-								if ok {
-									// Extract conversation metadata if available
+							// Collect text and image content from all parts
+								var texts []string
+								var respImages []Image
+
+								for _, part := range contentParts {
+									if s, ok := part.(string); ok {
+										texts = append(texts, s)
+									} else if pm, ok := part.(map[string]interface{}); ok {
+										if id, ok := pm["inlineData"].(map[string]interface{}); ok {
+											data, _ := id["data"].(string)
+											mime, _ := id["mimeType"].(string)
+											respImages = append(respImages, Image{
+												URL:  fmt.Sprintf("data:%s;base64,%s", mime, data),
+												
+											})
+										}
+									}
+								}
+
+								if len(texts) > 0 || len(respImages) > 0 {
 									var cid, rid, rcid string
 									if len(firstCandidate) > 0 {
 										if id, ok := firstCandidate[0].(string); ok {
@@ -718,7 +753,8 @@ func (c *Client) parseResponse(text string) (*Response, error) {
 										}
 									}
 
-									finalResText = resText
+									finalResText = strings.Join(texts, "\n")
+									finalImages = respImages
 									finalMetadata = map[string]any{
 										"cid":  cid,
 										"rid":  rid,
@@ -737,6 +773,7 @@ func (c *Client) parseResponse(text string) (*Response, error) {
 	if found {
 		return &Response{
 			Text:     finalResText,
+			Images:   finalImages,
 			Metadata: finalMetadata,
 		}, nil
 	}

@@ -9,6 +9,7 @@
   - [1.4 启动](#14-启动)
   - [1.5 systemd 托管](#15-systemd-托管)
   - [1.6 nginx 反代 + HTTPS](#16-nginx-反代--https)
+  - [1.7 可用模型](#17-可用模型)
 - [2. 各客户端接入方式](#2-各客户端接入方式)
   - [2.1 Claude Code](#21-claude-code)
   - [2.2 OpenAI SDK / 兼容客户端](#22-openai-sdk--兼容客户端)
@@ -68,6 +69,14 @@ RATE_LIMIT_MAX_REQUESTS=20
 
 **获取 Cookie**：浏览器访问 https://gemini.google.com 并登录 → F12 → Application → Cookies → 复制 `__Secure-1PSID` 和 `__Secure-1PSIDTS`。
 
+> [!TIP]
+> 如果服务器需要通过代理访问外网，在 `.env` 中额外添加：
+> ```env
+> HTTP_PROXY=http://127.0.0.1:7890
+> HTTPS_PROXY=http://127.0.0.1:7890
+> ```
+> 否则 Gemini Web API 的连接会超时卡在 SYN-SENT。
+
 环境变量说明：
 
 | 变量 | 必填 | 默认值 | 说明 |
@@ -113,6 +122,12 @@ RestartSec=5
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=gemini-web-to-api
+
+# 如果你的服务器需要代理才能访问 Gemini（国内常见），
+# 取消下面三行的注释并填上你的代理地址：
+# Environment="HTTP_PROXY=http://127.0.0.1:7890"
+# Environment="HTTPS_PROXY=http://127.0.0.1:7890"
+# Environment="NO_PROXY=localhost,127.0.0.1,.local"
 
 [Install]
 WantedBy=multi-user.target
@@ -174,6 +189,48 @@ sudo nginx -t && sudo nginx -s reload
 
 > 健康检查 `/health` 端点无需 API Key，可配入监控或负载均衡探测。
 
+### 1.7 可用模型
+
+启动后可通过 `GET /openai/v1/models` 查看完整模型列表。下面按用途分类说明。
+
+#### 当前主力（推荐首选）
+
+| 模型 ID | 说明 |
+|----------|------|
+| `gemini-3.5-flash` | 最新 Flash 模型，响应快、成本低，适合日常对话和轻量任务 |
+| `gemini-3.1-pro` | 最新 Pro 模型，推理和编程能力最强，适合复杂分析、长文本 |
+| `gemini-advanced` | Gemini Advanced 别名（即 2.5 Pro），稳定版 Pro，兼容性最好 |
+
+> **建议：** 日常用 `gemini-3.5-flash`，复杂任务用 `gemini-3.1-pro`。Claude Code 等工具推荐配 `gemini-3.1-pro` 或 `gemini-advanced`。
+
+#### 预览版
+
+| 模型 ID | 说明 |
+|----------|------|
+| `gemini-3-flash-preview` | 3.x Flash 系列预览，抢先体验新特性 |
+| `gemini-2.5-flash` | 2.5 Flash 稳定版，上一代主力 Flash |
+| `gemini-2.5-flash-preview-05-20` | 2.5 Flash 5/20 预览快照 |
+| `gemini-2.5-flash-preview-04-17` | 2.5 Flash 4/17 预览快照 |
+| `gemini-2.5-flash-preview-09-2025` | 2.5 Flash 9月预览快照 |
+
+#### 图片 / 多模态
+
+| 模型 ID | 说明 |
+|----------|------|
+| `gemini-3.1-flash-image-preview` | 3.1 Flash 图片生成预览 |
+| `gemini-3-pro-image-preview-11-2025` | 3 Pro 图片生成预览（2025/11 快照） |
+| `gemini-2.5-flash-image-preview` | 2.5 Flash 图片生成预览 |
+| `gemini-2.5-flash-image` | 2.5 Flash 图片生成 |
+
+#### 其他
+
+| 模型 ID | 说明 |
+|----------|------|
+| `gemini-2.5-flash-preview-tts` | 2.5 Flash TTS 语音合成预览 |
+| `gemini-2.0-flash` | 旧版 2.0 Flash，不推荐新项目使用 |
+
+> 列表中还有 `gemini-apps-while-signed-out`、`gemini-u-top-priority-*`、`gemini-u-lesson-tile-hover-bg` 等为 Google 内部/UI 使用的模型，非对话用途，忽略即可。
+
 ---
 
 ## 2. 各客户端接入方式
@@ -190,13 +247,13 @@ sudo nginx -t && sudo nginx -s reload
   "env": {
     "ANTHROPIC_BASE_URL": "${BASE_URL}/claude",
     "ANTHROPIC_AUTH_TOKEN": "<YOUR_API_KEY>",
-    "ANTHROPIC_MODEL": "gemini-2.5-pro",
-    "ANTHROPIC_DEFAULT_OPUS_MODEL": "gemini-2.5-pro",
-    "ANTHROPIC_DEFAULT_OPUS_MODEL_NAME": "gemini-2.5-pro",
-    "ANTHROPIC_DEFAULT_SONNET_MODEL": "gemini-2.5-flash",
-    "ANTHROPIC_DEFAULT_SONNET_MODEL_NAME": "gemini-2.5-flash",
-    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "gemini-2.5-flash",
-    "ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME": "gemini-2.5-flash"
+    "ANTHROPIC_MODEL": "gemini-3.1-pro",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "gemini-3.1-pro",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL_NAME": "gemini-3.1-pro",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "gemini-3.5-flash",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL_NAME": "gemini-3.5-flash",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "gemini-3.5-flash",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME": "gemini-3.5-flash"
   }
 }
 ```
@@ -211,7 +268,7 @@ sudo nginx -t && sudo nginx -s reload
 |------|----|
 | base_url | `${BASE_URL}/openai/v1` |
 | api_key | `<YOUR_API_KEY>` |
-| model | `gemini-2.5-pro` 或 `gemini-2.5-flash` |
+| model | `gemini-3.1-pro` 或 `gemini-3.5-flash` |
 
 可用模型列表：`GET ${BASE_URL}/openai/v1/models`
 
@@ -227,14 +284,14 @@ client = OpenAI(
 
 # 非流式
 response = client.chat.completions.create(
-    model="gemini-2.5-pro",
+    model="gemini-3.1-pro",
     messages=[{"role": "user", "content": "Hello!"}]
 )
 print(response.choices[0].message.content)
 
 # 流式
 stream = client.chat.completions.create(
-    model="gemini-2.5-pro",
+    model="gemini-3.1-pro",
     messages=[{"role": "user", "content": "写一首诗"}],
     stream=True
 )
@@ -254,7 +311,7 @@ const client = new OpenAI({
 });
 
 const response = await client.chat.completions.create({
-  model: "gemini-2.5-pro",
+  model: "gemini-3.1-pro",
   messages: [{ role: "user", content: "Hello!" }],
 });
 console.log(response.choices[0].message.content);
@@ -266,7 +323,7 @@ console.log(response.choices[0].message.content);
 curl -X POST ${BASE_URL}/openai/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "x-api-key: <YOUR_API_KEY>" \
-  -d '{"model":"gemini-2.5-pro","messages":[{"role":"user","content":"Hello!"}]}'
+  -d '{"model":"gemini-3.1-pro","messages":[{"role":"user","content":"Hello!"}]}'
 ```
 
 **兼容 OpenAI API 的桌面/Web 客户端**（ChatBox、NextChat、OpenCat、CodeGPT、Lobechat 等），在设置中修改 API 地址为 `${BASE_URL}`，路径为 `/openai/v1/chat/completions`，填入 API Key 即可。
@@ -291,7 +348,7 @@ client = anthropic.Anthropic(
 )
 
 response = client.messages.create(
-    model="gemini-2.5-pro",
+    model="gemini-3.1-pro",
     max_tokens=4096,
     messages=[{"role": "user", "content": "Hello!"}]
 )
@@ -302,7 +359,7 @@ print(response.content[0].text)
 
 ```python
 with client.messages.stream(
-    model="gemini-2.5-pro",
+    model="gemini-3.1-pro",
     max_tokens=4096,
     messages=[{"role": "user", "content": "Hello!"}]
 ) as stream:
@@ -317,7 +374,7 @@ curl -X POST ${BASE_URL}/claude/v1/messages \
   -H "Content-Type: application/json" \
   -H "x-api-key: <YOUR_API_KEY>" \
   -H "anthropic-version: 2023-06-01" \
-  -d '{"model":"gemini-2.5-pro","max_tokens":4096,"messages":[{"role":"user","content":"Hello!"}]}'
+  -d '{"model":"gemini-3.1-pro","max_tokens":4096,"messages":[{"role":"user","content":"Hello!"}]}'
 ```
 
 ---
@@ -333,7 +390,7 @@ genai.configure(
     client_options={"api_endpoint": "${BASE_URL}/gemini"}
 )
 
-model = genai.GenerativeModel("gemini-2.5-pro")
+model = genai.GenerativeModel("gemini-3.1-pro")
 response = model.generate_content("Write a poem about coding")
 print(response.text)
 ```
@@ -348,7 +405,7 @@ from langchain_openai import ChatOpenAI
 llm = ChatOpenAI(
     base_url="${BASE_URL}/openai/v1",
     api_key="<YOUR_API_KEY>",
-    model="gemini-2.5-pro"
+    model="gemini-3.1-pro"
 )
 
 response = llm.invoke("Explain quantum computing")

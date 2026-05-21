@@ -88,6 +88,19 @@ func (s *OpenAIService) CreateChatCompletion(ctx context.Context, req dto.ChatCo
 		message.Content = response.Text
 	}
 
+	// Attach generated images to the response content
+	if len(response.Images) > 0 {
+		if message.Content != "" {
+			message.Content += "\n\n"
+		}
+		for i, img := range response.Images {
+			if i > 0 {
+				message.Content += "\n"
+			}
+			message.Content += fmt.Sprintf("![generated-image](%s)", img.URL)
+		}
+	}
+
 	// Logic: Construct Response
 	return &dto.ChatCompletionResponse{
 		ID:      fmt.Sprintf("chatcmpl-%d", time.Now().Unix()),
