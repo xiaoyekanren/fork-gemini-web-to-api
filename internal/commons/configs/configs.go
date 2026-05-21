@@ -49,7 +49,8 @@ type OpenAIConfig struct {
 }
 
 type ServerConfig struct {
-	Port     string
+	Port string
+	Host string
 }
 
 const (
@@ -67,6 +68,7 @@ func New() (*Config, error) {
 
 	// Server
 	cfg.Server.Port = getEnv("PORT", defaultServerPort)
+	cfg.Server.Host = getEnv("HOST", "")
 	
 	// General
 	cfg.LogLevel = getEnv("LOG_LEVEL", defaultLogLevel)
