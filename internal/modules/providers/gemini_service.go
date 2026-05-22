@@ -90,6 +90,8 @@ func (c *Client) Init(ctx context.Context) error {
 	c.cookies.Secure1PSID = cleanCookie(c.cookies.Secure1PSID)
 	configPSIDTS := cleanCookie(c.cookies.Secure1PSIDTS) // Save original config value
 	c.cookies.Secure1PSIDTS = configPSIDTS
+	c.cookies.Secure1PSIDCC = cleanCookie(c.cookies.Secure1PSIDCC)
+	c.cookies.FillFromExtraCookies()
 
 	// Check if we should use cached cookies or clear cache
 	if c.cookies.Secure1PSID != "" {
@@ -174,8 +176,7 @@ func (c *Client) refreshSessionToken() error {
 	}
 
 	// 2. Prepare full cookie string
-	cookieStr := fmt.Sprintf("%s__Secure-1PSID=%s; __Secure-1PSIDTS=%s",
-		extraCookies, c.cookies.Secure1PSID, c.cookies.Secure1PSIDTS)
+	cookieStr := mergeCookieHeader(cookieHeaderFromCookies(c.cookies.ToHTTPCookies()), extraCookies)
 
 	commonHeaders := map[string]string{
 		"Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -199,29 +200,6 @@ func (c *Client) refreshSessionToken() error {
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return nil // follow redirects
 		},
-	}
-
-	// Helper to merge cookies into a map to avoid duplicates
-	mergeCookies := func(baseStr string, newCks []*http.Cookie) string {
-		m := make(map[string]string)
-		for _, part := range strings.Split(baseStr, ";") {
-			p := strings.TrimSpace(part)
-			if p == "" {
-				continue
-			}
-			kv := strings.SplitN(p, "=", 2)
-			if len(kv) == 2 {
-				m[kv[0]] = kv[1]
-			}
-		}
-		for _, ck := range newCks {
-			m[ck.Name] = ck.Value
-		}
-		res := []string{}
-		for k, v := range m {
-			res = append(res, fmt.Sprintf("%s=%s", k, v))
-		}
-		return strings.Join(res, "; ")
 	}
 
 	req1, _ := http.NewRequest("GET", "https://gemini.google.com/?hl=en", nil)
@@ -873,17 +851,107 @@ func (cs *CookieStore) ToHTTPCookies() []*http.Cookie {
 			SameSite: http.SameSiteNoneMode,
 		})
 	}
-	// Parse extra cookies from GEMINI_COOKIES env (format: name1=value1; name2=value2)
-	// Hardcoded essential Google auth cookies
-	for _, ck := range []struct{ n, v string }{
-		{"SAPISID", "imra4Q8nnKVOkKvo/A0oR8PuU2d2sa8Nxv"},
-		{"SID", "g.a000-Qg87O3SCnMV8gfUzDaIJvYPJczC7i3nuhfrhrZynCTwjS2prYa-en9R2g3-Jp22uASRlQACgYKATISARMSFQHGX2Mia4J21-hwJe_1SA6eCnc_ARoVAUF8yKoHEV49WQV5OKjfC8KV3AbW0076"},
-		{"HSID", "ADVXhAGzNplz6wY-g"},
-		{"SSID", "Aa4BXP0KHwnr86siW"},
-	} {
-		cookies = append(cookies, &http.Cookie{Name: ck.n, Value: ck.v, Domain: domain, Path: "/"})
+	for name, value := range parseCookiePairs(cs.ExtraCookies) {
+		cookies = upsertCookie(cookies, &http.Cookie{
+			Name:     name,
+			Value:    value,
+			Domain:   domain,
+			Path:     "/",
+			Secure:   true,
+			HttpOnly: true,
+			SameSite: http.SameSiteNoneMode,
+		})
 	}
 	return cookies
+}
+
+func (cs *CookieStore) FillFromExtraCookies() {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	extras := parseCookiePairs(cs.ExtraCookies)
+	if cs.Secure1PSID == "" {
+		cs.Secure1PSID = extras["__Secure-1PSID"]
+	}
+	if cs.Secure1PSIDTS == "" {
+		cs.Secure1PSIDTS = extras["__Secure-1PSIDTS"]
+	}
+	if cs.Secure1PSIDCC == "" {
+		cs.Secure1PSIDCC = extras["__Secure-1PSIDCC"]
+	}
+}
+
+func parseCookiePairs(raw string) map[string]string {
+	pairs := make(map[string]string)
+	for _, part := range strings.Split(raw, ";") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		kv := strings.SplitN(part, "=", 2)
+		if len(kv) != 2 {
+			continue
+		}
+
+		name := strings.TrimSpace(kv[0])
+		value := cleanCookie(kv[1])
+		if name == "" || value == "" {
+			continue
+		}
+		pairs[name] = value
+	}
+	return pairs
+}
+
+func upsertCookie(cookies []*http.Cookie, cookie *http.Cookie) []*http.Cookie {
+	for i, existing := range cookies {
+		if existing.Name == cookie.Name {
+			cookies[i] = cookie
+			return cookies
+		}
+	}
+	return append(cookies, cookie)
+}
+
+func cookieHeaderFromCookies(cookies []*http.Cookie) string {
+	parts := make([]string, 0, len(cookies))
+	for _, cookie := range cookies {
+		if cookie == nil || cookie.Name == "" || cookie.Value == "" {
+			continue
+		}
+		parts = append(parts, fmt.Sprintf("%s=%s", cookie.Name, cookie.Value))
+	}
+	return strings.Join(parts, "; ")
+}
+
+func mergeCookieHeader(base string, extra string) string {
+	pairs := parseCookiePairs(base)
+	for name, value := range parseCookiePairs(extra) {
+		pairs[name] = value
+	}
+
+	parts := make([]string, 0, len(pairs))
+	for name, value := range pairs {
+		parts = append(parts, fmt.Sprintf("%s=%s", name, value))
+	}
+	return strings.Join(parts, "; ")
+}
+
+func mergeCookies(base string, cookies []*http.Cookie) string {
+	pairs := parseCookiePairs(base)
+	for _, cookie := range cookies {
+		if cookie == nil || cookie.Name == "" || cookie.Value == "" {
+			continue
+		}
+		pairs[cookie.Name] = cookie.Value
+	}
+
+	parts := make([]string, 0, len(pairs))
+	for name, value := range pairs {
+		parts = append(parts, fmt.Sprintf("%s=%s", name, value))
+	}
+	return strings.Join(parts, "; ")
 }
 
 func cleanCookie(v string) string {
