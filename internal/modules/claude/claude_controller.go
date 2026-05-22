@@ -3,6 +3,7 @@ package claude
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"time"
 
 	common "gemini-web-to-api/internal/commons/utils"
@@ -86,8 +87,10 @@ func (h *ClaudeController) HandleModelByID(c fiber.Ctx) error {
 // @Failure 500 {object} map[string]interface{}
 // @Router /claude/v1/messages [post]
 func (h *ClaudeController) HandleMessages(c fiber.Ctx) error {
+	fmt.Println("DEBUG HandleMessages body_len:", len(c.Body()), "ct:", c.Get("Content-Type"))
 	var req dto.MessageRequest
 	if err := c.Bind().Body(&req); err != nil {
+		fmt.Println("DEBUG Body parse error:", err, "raw:", string(c.Body())[:300])
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"type":  "error",
 			"error": fiber.Map{"type": "invalid_request_error", "message": "Invalid JSON body"},
@@ -160,7 +163,7 @@ func (h *ClaudeController) HandleCountTokens(c fiber.Ctx) error {
 	// Simple estimation
 	totalChars := len(req.System)
 	for _, m := range req.Messages {
-		totalChars += len(m.Content)
+		totalChars += len(m.GetText())
 	}
 
 	return c.JSON(fiber.Map{

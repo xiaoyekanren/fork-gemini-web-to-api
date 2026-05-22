@@ -60,9 +60,10 @@ func (m *ChatCompletionMessage) UnmarshalJSON(data []byte) error {
 }
 
 func (m ChatCompletionMessage) ToModelMessage() models.Message {
+	b, _ := json.Marshal(m.Content)
 	return models.Message{
 		Role:    m.Role,
-		Content: m.Content,
+		Content: json.RawMessage(b),
 	}
 }
 

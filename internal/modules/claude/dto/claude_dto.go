@@ -2,38 +2,40 @@ package dto
 
 import (
 	"encoding/json"
+	"strings"
+
 	models "gemini-web-to-api/internal/commons/models"
 )
 
 // MessageRequest represents the specialized Claude request body
 type MessageRequest struct {
-	Model     string           `json:"model"`
-	MaxTokens int              `json:"max_tokens"`
-	Messages  []models.Message `json:"messages"`
-	System    string           `json:"system,omitempty"`
-	Stream    bool             `json:"stream,omitempty"`
-	Tools     []Tool           `json:"tools,omitempty"`
-	ToolChoice *ToolChoice     `json:"tool_choice,omitempty"`
+	Model      string           `json:"model"`
+	MaxTokens  int              `json:"max_tokens"`
+	Messages   []models.Message `json:"messages"`
+	System     json.RawMessage  `json:"system,omitempty"` // string or [{type,text}]
+	Stream     bool             `json:"stream,omitempty"`
+	Tools      []Tool           `json:"tools,omitempty"`
+	ToolChoice *ToolChoice      `json:"tool_choice,omitempty"`
 }
 
 // Tool represents a tool available to the model
 type Tool struct {
 	Name        string          `json:"name"`
 	Description string          `json:"description"`
-	InputSchema json.RawMessage `json:"input_schema" swagignore:"true"` // @SchemaType object
+	InputSchema json.RawMessage `json:"input_schema" swagignore:"true"`
 }
 
 // ToolChoice represents how the model should use tools
 type ToolChoice struct {
-	Type string `json:"type"` // "auto", "any", "tool"
+	Type string `json:"type"`
 	Name string `json:"name,omitempty"`
 }
 
 // MessageResponse represents the non-streaming response body
 type MessageResponse struct {
 	ID         string          `json:"id"`
-	Type       string          `json:"type"` // "message"
-	Role       string          `json:"role"` // "assistant"
+	Type       string          `json:"type"`
+	Role       string          `json:"role"`
 	Model      string          `json:"model"`
 	Content    []ConfigContent `json:"content"`
 	StopReason string          `json:"stop_reason"`
@@ -42,26 +44,51 @@ type MessageResponse struct {
 
 // ConfigContent represents the content block in a response
 type ConfigContent struct {
-	Type  string `json:"type"` // "text" or "tool_use"
-	Text  string `json:"text,omitempty"`
-	ID    string `json:"id,omitempty"`    // for tool_use
-	Name  string `json:"name,omitempty"`  // for tool_use
-	Input map[string]interface{} `json:"input,omitempty"` // for tool_use
+	Type  string                 `json:"type"`
+	Text  string                 `json:"text,omitempty"`
+	ID    string                 `json:"id,omitempty"`
+	Name  string                 `json:"name,omitempty"`
+	Input map[string]interface{} `json:"input,omitempty"`
 }
 
 // StreamEvent represents a streaming event
 type StreamEvent struct {
-	Type         string           `json:"type"`                    // e.g. message_start, content_block_delta
-	Message      *MessageResponse `json:"message,omitempty"`       // present in message_start
-	Index        int              `json:"index,omitempty"`         // present in content_block_start/delta
-	ContentBlock *ConfigContent   `json:"content_block,omitempty"` // present in content_block_start
-	DeltaField   *models.Delta    `json:"delta,omitempty"`         // present in content_block_delta
-	StopReason   string           `json:"stop_reason,omitempty"`   // present in message_stop
-	UsageField   *models.Usage    `json:"usage,omitempty"`         // present in message_delta (optional?) but essential in message_stop sometimes
-	Error        *Error           `json:"error,omitempty"`         // present in error event
+	Type         string           `json:"type"`
+	Message      *MessageResponse `json:"message,omitempty"`
+	Index        int              `json:"index,omitempty"`
+	ContentBlock *ConfigContent   `json:"content_block,omitempty"`
+	DeltaField   *models.Delta    `json:"delta,omitempty"`
+	StopReason   string           `json:"stop_reason,omitempty"`
+	UsageField   *models.Usage    `json:"usage,omitempty"`
+	Error        *Error           `json:"error,omitempty"`
 }
 
 type Error struct {
 	Type    string `json:"type"`
 	Message string `json:"message"`
+}
+
+// GetSystemText extracts text from System field (handles both string and array format)
+func GetSystemText(raw json.RawMessage) string {
+	if len(raw) == 0 || string(raw) == "null" {
+		return ""
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err == nil {
+		return s
+	}
+	var blocks []struct {
+		Type string `json:"type"`
+		Text string `json:"text"`
+	}
+	if err := json.Unmarshal(raw, &blocks); err == nil {
+		var texts []string
+		for _, b := range blocks {
+			if b.Type == "text" && b.Text != "" {
+				texts = append(texts, b.Text)
+			}
+		}
+		return strings.Join(texts, "\n")
+	}
+	return ""
 }

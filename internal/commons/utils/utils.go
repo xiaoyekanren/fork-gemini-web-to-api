@@ -28,7 +28,7 @@ func BuildPromptFromMessages(messages []models.Message, systemPrompt string) str
 		} else if strings.EqualFold(msg.Role, "system") {
 			role = "System"
 		}
-		promptBuilder.WriteString(fmt.Sprintf("%s: %s\n", role, msg.Content))
+		promptBuilder.WriteString(fmt.Sprintf("%s: %s\n", role, msg.GetText()))
 	}
 
 	return strings.TrimSpace(promptBuilder.String())
@@ -42,7 +42,7 @@ func ValidateMessages(messages []models.Message) error {
 
 	allEmpty := true
 	for _, msg := range messages {
-		if strings.TrimSpace(msg.Content) != "" {
+		if strings.TrimSpace(msg.GetText()) != "" {
 			allEmpty = false
 			break
 		}

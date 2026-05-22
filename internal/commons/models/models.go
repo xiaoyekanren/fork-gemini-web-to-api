@@ -1,9 +1,42 @@
 package models
 
+import (
+	"encoding/json"
+	"strings"
+)
+
 // Message represents a chat message (shared across OpenAI, Claude, etc)
 type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role    string          `json:"role"`
+	Content json.RawMessage `json:"content"` // string or [{type,text}]
+}
+
+// ContentBlock represents a content block in Anthropic API format
+type ContentBlock struct {
+	Type string `json:"type"`
+	Text string `json:"text,omitempty"`
+}
+
+// GetText extracts text content from either string or []ContentBlock format
+func (m Message) GetText() string {
+	if len(m.Content) == 0 || string(m.Content) == "null" {
+		return ""
+	}
+	var s string
+	if err := json.Unmarshal(m.Content, &s); err == nil {
+		return s
+	}
+	var blocks []ContentBlock
+	if err := json.Unmarshal(m.Content, &blocks); err == nil {
+		var texts []string
+		for _, b := range blocks {
+			if b.Type == "text" && b.Text != "" {
+				texts = append(texts, b.Text)
+			}
+		}
+		return strings.Join(texts, "\n")
+	}
+	return ""
 }
 
 // ModelListResponse represents the list of models
@@ -33,7 +66,6 @@ type Delta struct {
 	Role        string `json:"role,omitempty"`
 }
 
-
 // Usage represents token usage (compatible format)
 type Usage struct {
 	PromptTokens     int `json:"prompt_tokens"`
@@ -45,7 +77,7 @@ type Usage struct {
 
 // ErrorResponse represents a standard error response
 type ErrorResponse struct {
-	Error interface{} `json:"error,omitempty"` // Can be string or map[string]interface{}
+	Error interface{} `json:"error,omitempty"`
 	Code  string      `json:"code,omitempty"`
 	Type  string      `json:"type,omitempty"`
 }

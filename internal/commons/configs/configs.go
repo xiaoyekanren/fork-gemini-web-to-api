@@ -31,6 +31,7 @@ type RateLimitConfig struct {
 type GeminiConfig struct {
 	Secure1PSID     string
 	Secure1PSIDTS   string
+	Secure1PSIDCC   string
 	RefreshInterval int
 	MaxRetries      int
 	Cookies         string
@@ -84,6 +85,7 @@ func New() (*Config, error) {
 	// Gemini
 	cfg.Gemini.Secure1PSID = os.Getenv("GEMINI_1PSID")
 	cfg.Gemini.Secure1PSIDTS = os.Getenv("GEMINI_1PSIDTS")
+	cfg.Gemini.Secure1PSIDCC = os.Getenv("GEMINI_1PSIDCC")
 	cfg.Gemini.Cookies = os.Getenv("GEMINI_COOKIES")
 	cfg.Gemini.RefreshInterval = getEnvInt("GEMINI_REFRESH_INTERVAL", defaultGeminiRefreshInterval)
 	cfg.Gemini.MaxRetries = getEnvInt("GEMINI_MAX_RETRIES", defaultGeminiMaxRetries)
@@ -105,12 +107,8 @@ func (c *Config) Validate() error {
 		missingVars = append(missingVars, "GEMINI_1PSID")
 	}
 
-	if c.Gemini.Secure1PSID != "" {
-		// If PSID is present, we need at least one of these
-		if c.Gemini.Secure1PSIDTS == "" {
-			missingVars = append(missingVars, "GEMINI_1PSIDTS")
-		}
-	}
+	// 1PSIDTS is optional — obtained via cookie rotation
+	_ = c.Gemini.Secure1PSIDTS
 
 	// Check Server port is valid
 	if c.Server.Port == "" {

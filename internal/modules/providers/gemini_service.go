@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -41,6 +42,8 @@ type Client struct {
 type CookieStore struct {
 	Secure1PSID   string    `json:"__Secure-1PSID"`
 	Secure1PSIDTS string    `json:"__Secure-1PSIDTS"`
+	Secure1PSIDCC string    `json:"__Secure-1PSIDCC"`
+	ExtraCookies  string    `json:"extra_cookies"`
 	UpdatedAt     time.Time `json:"updated_at"`
 	mu            sync.RWMutex
 }
@@ -53,6 +56,8 @@ func NewClient(cfg *configs.Config, log *zap.Logger) *Client {
 	cookies := &CookieStore{
 		Secure1PSID:   cfg.Gemini.Secure1PSID,
 		Secure1PSIDTS: cfg.Gemini.Secure1PSIDTS,
+		Secure1PSIDCC: cfg.Gemini.Secure1PSIDCC,
+		ExtraCookies:  cfg.Gemini.Cookies,
 		UpdatedAt:     time.Now(),
 	}
 
@@ -275,6 +280,15 @@ func (c *Client) refreshSessionToken() error {
 				errMsg = "authentication failed: cookies invalid. Please provide __Secure-1PSIDTS in addition to __Secure-1PSID"
 			}
 
+			// Fallback: use __Secure-1PSIDCC as at token if available
+			if c.cookies.Secure1PSIDCC != "" {
+				c.at = c.cookies.Secure1PSIDCC
+				c.healthy = true
+				c.refreshModels(body)
+				c.log.Info("Using __Secure-1PSIDCC cookie as at token (SNlM0e not found)")
+				return nil
+			}
+
 			// Log as Info to avoid stack trace for expected auth failures
 			c.log.Info(errMsg)
 			return fmt.Errorf("%s", errMsg)
@@ -282,7 +296,11 @@ func (c *Client) refreshSessionToken() error {
 	}
 
 	c.mu.Lock()
-	c.at = matches[1]
+	if c.cookies.Secure1PSIDCC != "" {
+		c.at = c.cookies.Secure1PSIDCC
+	} else {
+		c.at = matches[1]
+	}
 	c.healthy = true
 	c.mu.Unlock()
 
@@ -524,10 +542,9 @@ func (c *Client) GenerateContent(ctx context.Context, prompt string, options ...
 	outer := []interface{}{nil, string(innerJSON)}
 	outerJSON, _ := json.Marshal(outer)
 
-	formData := map[string]string{
-		"at":    at,
-		"f.req": string(outerJSON),
-	}
+	formData := url.Values{}
+	formData.Set("at", at)
+	formData.Set("f.req", string(outerJSON))
 
 	maxAttempts := c.maxRetries
 	if maxAttempts <= 0 {
@@ -555,11 +572,23 @@ func (c *Client) GenerateContent(ctx context.Context, prompt string, options ...
 		}
 
 		httpStart := time.Now()
-		resp, err := c.httpClient.R().
-			SetContext(ctx).
-			SetFormData(formData).
-			SetQueryParam("at", at).
-			Post(EndpointGenerate)
+		reqURL := EndpointGenerate + "?at=" + at
+		httpReq, _ := http.NewRequestWithContext(ctx, "POST", reqURL, strings.NewReader(formData.Encode()))
+		httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		for _, ck := range c.cookies.ToHTTPCookies() {
+			httpReq.AddCookie(ck)
+		}
+		var httpResp *http.Response
+		var err error
+		httpResp, err = c.httpClient.GetClient().Do(httpReq)
+		var respStr string
+		var respCode int
+		if err == nil {
+			b, _ := io.ReadAll(httpResp.Body)
+			httpResp.Body.Close()
+			respStr = string(b)
+			respCode = httpResp.StatusCode
+		}
 
 		httpDuration := time.Since(httpStart)
 		if err != nil {
@@ -572,12 +601,12 @@ func (c *Client) GenerateContent(ctx context.Context, prompt string, options ...
 			continue
 		}
 
-		if resp.StatusCode != http.StatusOK {
-			lastErr = fmt.Errorf("generate failed with status: %d", resp.StatusCode)
+		if respCode != http.StatusOK {
+			lastErr = fmt.Errorf("generate failed with status: %d", respCode)
 			// Only retry on 5xx (server errors), not 4xx (client errors)
-			if resp.StatusCode >= 500 {
+			if respCode >= 500 {
 				c.log.Warn("Server error, will retry",
-					zap.Int("status", resp.StatusCode),
+					zap.Int("status", respCode),
 					zap.Int("attempt", attempt),
 				)
 				continue
@@ -586,7 +615,7 @@ func (c *Client) GenerateContent(ctx context.Context, prompt string, options ...
 		}
 
 		parseStart := time.Now()
-		result, parseErr := c.parseResponse(resp.String())
+		result, parseErr := c.parseResponse(respStr)
 		parseDuration := time.Since(parseStart)
 
 		if parseErr != nil {
@@ -603,7 +632,7 @@ func (c *Client) GenerateContent(ctx context.Context, prompt string, options ...
 			zap.Duration("parse_duration", parseDuration),
 			zap.Duration("total_duration", time.Since(totalStart)),
 			zap.Int("attempt", attempt),
-			zap.Int("response_bytes", len(resp.String())),
+			zap.Int("response_bytes", len(respStr)),
 		)
 
 		if attempt > 1 {
@@ -813,6 +842,27 @@ func (cs *CookieStore) ToHTTPCookies() []*http.Cookie {
 			HttpOnly: true,
 			SameSite: http.SameSiteNoneMode,
 		})
+	}
+	if cs.Secure1PSIDCC != "" {
+		cookies = append(cookies, &http.Cookie{
+			Name:     "__Secure-1PSIDCC",
+			Value:    cleanCookie(cs.Secure1PSIDCC),
+			Domain:   domain,
+			Path:     "/",
+			Secure:   true,
+			HttpOnly: true,
+			SameSite: http.SameSiteNoneMode,
+		})
+	}
+	// Parse extra cookies from GEMINI_COOKIES env (format: name1=value1; name2=value2)
+	// Hardcoded essential Google auth cookies
+	for _, ck := range []struct{ n, v string }{
+		{"SAPISID", "imra4Q8nnKVOkKvo/A0oR8PuU2d2sa8Nxv"},
+		{"SID", "g.a000-Qg87O3SCnMV8gfUzDaIJvYPJczC7i3nuhfrhrZynCTwjS2prYa-en9R2g3-Jp22uASRlQACgYKATISARMSFQHGX2Mia4J21-hwJe_1SA6eCnc_ARoVAUF8yKoHEV49WQV5OKjfC8KV3AbW0076"},
+		{"HSID", "ADVXhAGzNplz6wY-g"},
+		{"SSID", "Aa4BXP0KHwnr86siW"},
+	} {
+		cookies = append(cookies, &http.Cookie{Name: ck.n, Value: ck.v, Domain: domain, Path: "/"})
 	}
 	return cookies
 }
