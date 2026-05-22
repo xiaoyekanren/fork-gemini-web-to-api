@@ -65,7 +65,24 @@ RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX_REQUESTS=20
 ```
 
-**获取 Cookie**：浏览器访问 https://gemini.google.com 并登录 → F12 → Application → Cookies → 复制 `gemini.google.com` / Google 登录相关的完整 Cookie 字符串，填入 `GEMINI_COOKIES`。`GEMINI_1PSID` / `GEMINI_1PSIDCC` 仍可作为兼容快捷项，但推荐使用完整 Cookie 集。
+**获取 Cookie**：
+
+推荐从浏览器 Network 请求头复制完整 Cookie 字符串，避免从 Cookies 面板逐个复制时漏项。
+
+1. 用 Chrome/Edge 访问 https://gemini.google.com，确认已登录且能正常聊天
+2. 按 `F12` 打开开发者工具，进入 `Network` / `网络`
+3. 刷新页面，或随便发送一句话
+4. 点开一个发往 `gemini.google.com` 的请求，优先找 `StreamGenerate`、`batchexecute` 或任意 Gemini 请求
+5. 在 `Headers` / `标头` → `Request Headers` / `请求标头` 中找到 `Cookie:`
+6. 复制 `Cookie:` 后面的完整内容，填入 `GEMINI_COOKIES`
+
+`GEMINI_COOKIES` 必须是 `name=value; name=value` 形式，例如：
+
+```env
+GEMINI_COOKIES="APISID=...; SAPISID=...; SID=...; __Secure-1PSID=...; __Secure-1PSIDCC=...; __Secure-3PSID=..."
+```
+
+不要包含 `Cookie:` 这几个字，也不要只复制单个 value。`GEMINI_1PSID` / `GEMINI_1PSIDCC` 仍可作为兼容快捷项，但推荐使用完整 Cookie 集。
 
 > [!TIP]
 > 如果服务器需要通过代理访问外网，在 `.env` 中额外添加：
