@@ -194,6 +194,8 @@ func (s *ClaudeService) buildToolBridgePrompt(req dto.MessageRequest, basePrompt
 	b.WriteString("Rules:\n")
 	b.WriteString("- Use only tool names listed below.\n")
 	b.WriteString("- input must be valid JSON object.\n")
+	b.WriteString("- Tool input values must be plain JSON values, not Markdown.\n")
+	b.WriteString("- For URL fields, use the raw URL string only, never [text](url).\n")
 
 	b.WriteString("Available tools:\n")
 	for _, t := range req.Tools {
@@ -246,7 +248,7 @@ func (s *ClaudeService) parseToolBridgeOutput(req dto.MessageRequest, text strin
 				Type:  "tool_use",
 				ID:    id,
 				Name:  tc.Name,
-				Input: tc.Input,
+				Input: common.NormalizeToolInputMap(tc.Input),
 			})
 		}
 		return uses, ""

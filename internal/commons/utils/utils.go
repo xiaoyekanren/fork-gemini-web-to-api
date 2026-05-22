@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -125,7 +126,6 @@ func SendSSEEvent(w *bufio.Writer, log *zap.Logger, v interface{}) bool {
 	return true
 }
 
-
 // SplitResponseIntoChunks simulates streaming by splitting response into chunks
 func SplitResponseIntoChunks(text string, delayMs int) []string {
 	words := strings.Split(text, " ")
@@ -174,4 +174,90 @@ func StripCodeFence(text string) string {
 		trimmed = strings.TrimSpace(trimmed[:idx])
 	}
 	return trimmed
+}
+
+// NormalizeToolInputMap fixes common LLM formatting mistakes before tool inputs
+// are handed back to strict clients such as Claude Code.
+func NormalizeToolInputMap(input map[string]interface{}) map[string]interface{} {
+	if input == nil {
+		return map[string]interface{}{}
+	}
+
+	normalized, ok := normalizeToolInputValue(input).(map[string]interface{})
+	if !ok {
+		return input
+	}
+	return normalized
+}
+
+// NormalizeToolArgumentsJSON normalizes JSON object arguments while preserving
+// the original payload if it cannot be decoded.
+func NormalizeToolArgumentsJSON(raw json.RawMessage) json.RawMessage {
+	if len(raw) == 0 {
+		return raw
+	}
+
+	var value interface{}
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return raw
+	}
+
+	data, err := json.Marshal(normalizeToolInputValue(value))
+	if err != nil {
+		return raw
+	}
+	return data
+}
+
+func normalizeToolInputValue(value interface{}) interface{} {
+	switch v := value.(type) {
+	case map[string]interface{}:
+		out := make(map[string]interface{}, len(v))
+		for key, child := range v {
+			out[key] = normalizeToolInputChild(key, child)
+		}
+		return out
+	case []interface{}:
+		out := make([]interface{}, len(v))
+		for i, child := range v {
+			out[i] = normalizeToolInputValue(child)
+		}
+		return out
+	default:
+		return value
+	}
+}
+
+func normalizeToolInputChild(key string, value interface{}) interface{} {
+	if s, ok := value.(string); ok && isURLLikeKey(key) {
+		return unwrapMarkdownURL(s)
+	}
+	return normalizeToolInputValue(value)
+}
+
+func isURLLikeKey(key string) bool {
+	lower := strings.ToLower(strings.TrimSpace(key))
+	return lower == "url" || lower == "uri" || strings.HasSuffix(lower, "_url") || strings.HasSuffix(lower, "_uri")
+}
+
+func unwrapMarkdownURL(value string) string {
+	trimmed := strings.TrimSpace(value)
+	linkStart := strings.Index(trimmed, "](")
+	if !strings.HasPrefix(trimmed, "[") || linkStart < 0 || !strings.HasSuffix(trimmed, ")") {
+		return value
+	}
+
+	candidate := strings.TrimSpace(trimmed[linkStart+2 : len(trimmed)-1])
+	if !isHTTPURL(candidate) {
+		return value
+	}
+	return candidate
+}
+
+func isHTTPURL(value string) bool {
+	parsed, err := url.ParseRequestURI(value)
+	if err != nil {
+		return false
+	}
+	return parsed.Scheme == "http" || parsed.Scheme == "https"
 }

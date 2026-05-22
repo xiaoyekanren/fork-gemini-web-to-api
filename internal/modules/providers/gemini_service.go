@@ -94,7 +94,7 @@ func (c *Client) Init(ctx context.Context) error {
 	// Check if we should use cached cookies or clear cache
 	if c.cookies.Secure1PSID != "" {
 		cachedTS, err := c.LoadCachedCookies()
-		
+
 		// If config has a new PSIDTS that differs from cache, clear cache and use config
 		if configPSIDTS != "" && cachedTS != "" && configPSIDTS != cachedTS {
 			_ = c.ClearCookieCache()
@@ -108,11 +108,15 @@ func (c *Client) Init(ctx context.Context) error {
 
 	// Obtain PSIDTS via rotation if missing
 	if c.cookies.Secure1PSID != "" && c.cookies.Secure1PSIDTS == "" {
-		c.log.Info("Only __Secure-1PSID provided, attempting to obtain __Secure-1PSIDTS via rotation...")
-		if err := c.RotateCookies(); err != nil {
-			c.log.Info("Rotation failed, proceeding with just __Secure-1PSID (might fail)", zap.String("error", err.Error()))
+		if c.cookies.Secure1PSIDCC != "" {
+			c.log.Info("__Secure-1PSIDTS not configured; using __Secure-1PSIDCC fallback. Update GEMINI_1PSIDTS to restore cookie rotation.")
 		} else {
-			c.log.Info("Successfully obtained __Secure-1PSIDTS via rotation")
+			c.log.Info("Only __Secure-1PSID provided, attempting to obtain __Secure-1PSIDTS via rotation...")
+			if err := c.RotateCookies(); err != nil {
+				c.log.Info("Rotation failed, proceeding with just __Secure-1PSID (might fail)", zap.String("error", err.Error()))
+			} else {
+				c.log.Info("Successfully obtained __Secure-1PSIDTS via rotation")
+			}
 		}
 	}
 
@@ -154,7 +158,7 @@ func (c *Client) refreshSessionToken() error {
 	tmpClient := req.NewClient().
 		SetTimeout(30 * time.Second).
 		SetUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-	
+
 	resp1, err := tmpClient.R().Get("https://www.google.com/")
 	extraCookies := ""
 	if err == nil {
@@ -170,7 +174,7 @@ func (c *Client) refreshSessionToken() error {
 	}
 
 	// 2. Prepare full cookie string
-	cookieStr := fmt.Sprintf("%s__Secure-1PSID=%s; __Secure-1PSIDTS=%s", 
+	cookieStr := fmt.Sprintf("%s__Secure-1PSID=%s; __Secure-1PSIDTS=%s",
 		extraCookies, c.cookies.Secure1PSID, c.cookies.Secure1PSIDTS)
 
 	commonHeaders := map[string]string{
@@ -253,7 +257,7 @@ func (c *Client) refreshSessionToken() error {
 	// Dump for debugging if it fails
 	// reqDump, _ := httputil.DumpRequestOut(req2, false)
 	// respDump, _ := httputil.DumpResponse(resp, false)
-	
+
 	var bodyReader io.ReadCloser = resp.Body
 	if strings.Contains(resp.Header.Get("Content-Encoding"), "gzip") {
 		gz, err := gzip.NewReader(resp.Body)
@@ -266,14 +270,12 @@ func (c *Client) refreshSessionToken() error {
 	bodyBytes, _ := io.ReadAll(bodyReader)
 	body := string(bodyBytes)
 
-
 	re := regexp.MustCompile(`"SNlM0e":"([^"]+)"`)
 	matches := re.FindStringSubmatch(body)
 	if len(matches) < 2 {
 		reFallback := regexp.MustCompile(`\["SNlM0e","([^"]+)"\]`)
 		matches = reFallback.FindStringSubmatch(body)
 		if len(matches) < 2 {
-
 
 			errMsg := "authentication failed: SNlM0e not found"
 			if strings.Contains(body, "Sign in") || strings.Contains(body, "login") {
@@ -319,12 +321,12 @@ func (c *Client) refreshModels(body string) {
 	// We look for gemini- followed by alphanumeric characters, dots, or dashes.
 	modelIDRegex := regexp.MustCompile(`gemini-[a-zA-Z0-9.-]+`)
 	matches := modelIDRegex.FindAllString(body, -1)
-	
+
 	uniqueIDs := make(map[string]bool)
 	for _, id := range matches {
 		// Clean up potential trailing backslashes or quotes if they were caught
 		id = strings.Trim(id, `\"' `)
-		
+
 		// Basic validation: ensure it doesn't look like a generic string or partial ID
 		if !uniqueIDs[id] && len(id) > 10 {
 			uniqueIDs[id] = true
@@ -358,7 +360,7 @@ func (c *Client) refreshModels(body string) {
 	c.mu.Lock()
 	c.cachedModels = newModels
 	c.mu.Unlock()
-	
+
 	if len(newModels) == 0 {
 		c.log.Warn("⚠️ No models found in Gemini Web response. Please check your cookies or connection.")
 	} else {
@@ -378,6 +380,14 @@ func (c *Client) startAutoRefresh() {
 	for {
 		select {
 		case <-ticker.C:
+			if c.cookies.Secure1PSIDTS == "" && c.cookies.Secure1PSIDCC != "" {
+				c.log.Debug("Skipping scheduled cookie rotation because __Secure-1PSIDTS is missing and __Secure-1PSIDCC fallback is configured")
+				c.mu.Lock()
+				c.healthy = true
+				c.mu.Unlock()
+				continue
+			}
+
 			c.log.Debug("Starting scheduled cookie refresh")
 			rotateErr := c.RotateCookies()
 			if rotateErr != nil {
@@ -386,6 +396,16 @@ func (c *Client) startAutoRefresh() {
 					strings.Contains(rotateErr.Error(), "status 403")
 
 				if isCookieExpired {
+					if c.cookies.Secure1PSIDCC != "" {
+						c.log.Warn("Cookie rotation failed, but __Secure-1PSIDCC fallback is configured; keeping client healthy",
+							zap.Error(rotateErr),
+							zap.String("action", "Update GEMINI_1PSIDTS to restore scheduled cookie rotation"),
+						)
+						c.mu.Lock()
+						c.healthy = true
+						c.mu.Unlock()
+						continue
+					}
 					c.log.Error("Cookies have expired — please update GEMINI_1PSID and GEMINI_1PSIDTS in .env",
 						zap.Error(rotateErr),
 						zap.String("action", "Visit https://gemini.google.com → F12 → Application → Cookies"),
@@ -447,7 +467,7 @@ func (c *Client) RotateCookies() error {
 	// Payload must be exactly this string
 	strBody := `[000,"-0000000000000000000"]`
 	req, _ := http.NewRequest("POST", EndpointRotateCookies, strings.NewReader(strBody))
-	
+
 	req.Header.Set("Content-Type", "application/json")
 	// Google often blocks requests with default Go-http-client User-Agent
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
@@ -493,7 +513,7 @@ func (c *Client) RotateCookies() error {
 func (c *Client) GetCookies() *CookieStore {
 	c.cookies.mu.RLock()
 	defer c.cookies.mu.RUnlock()
-	
+
 	return &CookieStore{
 		Secure1PSID:   c.cookies.Secure1PSID,
 		Secure1PSIDTS: c.cookies.Secure1PSIDTS,
@@ -514,7 +534,7 @@ func (c *Client) GenerateContent(ctx context.Context, prompt string, options ...
 			config.Model = c.cachedModels[0].ID
 		}
 	}
-	
+
 	// Accept any model matching gemini-* pattern. The HTML page source only exposes
 	// a subset; newer models load dynamically and the Gemini backend accepts them.
 	modelPattern := regexp.MustCompile(`^gemini-[a-zA-Z0-9.-]+$`)
@@ -691,18 +711,18 @@ func (c *Client) IsHealthy() bool {
 func (c *Client) ListModels() []ModelInfo {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	if len(c.cachedModels) == 0 {
 		return []ModelInfo{}
 	}
-	
+
 	return c.cachedModels
 }
 
 func (c *Client) ListModelsIDs() []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	ids := make([]string, 0, len(c.cachedModels))
 	for _, m := range c.cachedModels {
 		ids = append(ids, m.ID)
@@ -750,7 +770,7 @@ func (c *Client) parseResponse(text string) (*Response, error) {
 						if ok && len(firstCandidate) >= 2 {
 							contentParts, ok := firstCandidate[1].([]interface{})
 							if ok && len(contentParts) > 0 {
-							// Collect text and image content from all parts
+								// Collect text and image content from all parts
 								var texts []string
 								var respImages []Image
 
@@ -762,8 +782,7 @@ func (c *Client) parseResponse(text string) (*Response, error) {
 											data, _ := id["data"].(string)
 											mime, _ := id["mimeType"].(string)
 											respImages = append(respImages, Image{
-												URL:  fmt.Sprintf("data:%s;base64,%s", mime, data),
-												
+												URL: fmt.Sprintf("data:%s;base64,%s", mime, data),
 											})
 										}
 									}
@@ -932,22 +951,22 @@ func (c *Client) ClearCookieCache() error {
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	
+
 	return nil
 }
 
 const (
-EndpointGoogle        = "https://www.google.com"
-EndpointInit          = "https://gemini.google.com/app"
-EndpointGenerate      = "https://gemini.google.com/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"
-EndpointRotateCookies = "https://accounts.google.com/RotateCookies"
-EndpointBatchExec     = "https://gemini.google.com/_/BardChatUi/data/batchexecute"
+	EndpointGoogle        = "https://www.google.com"
+	EndpointInit          = "https://gemini.google.com/app"
+	EndpointGenerate      = "https://gemini.google.com/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"
+	EndpointRotateCookies = "https://accounts.google.com/RotateCookies"
+	EndpointBatchExec     = "https://gemini.google.com/_/BardChatUi/data/batchexecute"
 )
 
 var DefaultHeaders = map[string]string{
-"Content-Type":  "application/x-www-form-urlencoded;charset=utf-8",
-"Origin":        "https://gemini.google.com",
-"Referer":       "https://gemini.google.com/",
-"User-Agent":    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-"X-Same-Domain": "1",
+	"Content-Type":  "application/x-www-form-urlencoded;charset=utf-8",
+	"Origin":        "https://gemini.google.com",
+	"Referer":       "https://gemini.google.com/",
+	"User-Agent":    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+	"X-Same-Domain": "1",
 }

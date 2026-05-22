@@ -173,6 +173,8 @@ func (s *GeminiService) buildToolBridgePrompt(req dto.GeminiGenerateRequest, bas
 	b.WriteString("Rules:\n")
 	b.WriteString("- Use only tool names listed below.\n")
 	b.WriteString("- arguments must be valid JSON object.\n")
+	b.WriteString("- Tool argument values must be plain JSON values, not Markdown.\n")
+	b.WriteString("- For URL fields, use the raw URL string only, never [text](url).\n")
 
 	b.WriteString("Available tools:\n")
 	for _, tool := range req.Tools {
@@ -217,7 +219,7 @@ func (s *GeminiService) parseToolBridgeOutput(req dto.GeminiGenerateRequest, tex
 		for _, tc := range payload.ToolCalls {
 			calls = append(calls, dto.FunctionCall{
 				Name: tc.Name,
-				Args: tc.Arguments,
+				Args: utils.NormalizeToolArgumentsJSON(tc.Arguments),
 			})
 		}
 		return calls, ""

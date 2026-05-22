@@ -222,6 +222,8 @@ func (s *OpenAIService) buildToolBridgePrompt(req dto.ChatCompletionRequest, bas
 	b.WriteString("Rules:\n")
 	b.WriteString("- Use only tool names listed below.\n")
 	b.WriteString("- arguments must be valid JSON object.\n")
+	b.WriteString("- Tool argument values must be plain JSON values, not Markdown.\n")
+	b.WriteString("- For URL fields, use the raw URL string only, never [text](url).\n")
 
 	toolChoiceMode := req.ToolChoiceMode()
 	if toolChoiceMode == "required" {
@@ -351,7 +353,6 @@ func (s *OpenAIService) buildFallbackToolCalls(req dto.ChatCompletionRequest) []
 	return nil
 }
 
-
 func decodeToolBridgePayload(text string) (toolBridgePayload, bool) {
 	var payload toolBridgePayload
 	if err := json.Unmarshal([]byte(text), &payload); err == nil {
@@ -424,6 +425,8 @@ func normalizeArguments(raw json.RawMessage) string {
 			}
 		}
 	}
+
+	trimmed = string(utils.NormalizeToolArgumentsJSON(json.RawMessage(trimmed)))
 
 	var compact bytes.Buffer
 	if err := json.Compact(&compact, []byte(trimmed)); err != nil {
