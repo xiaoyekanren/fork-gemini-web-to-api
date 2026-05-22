@@ -51,14 +51,12 @@ GOOS=linux GOARCH=amd64 go build -o gemini-web-to-api ./cmd/server/
 
 ```env
 # 必填 — Google Cookie
-GEMINI_1PSID=你的_1PSID值
-GEMINI_1PSIDTS=你的_1PSIDTS值
+GEMINI_COOKIES="APISID=...; SAPISID=...; __Secure-1PSID=...; __Secure-1PSIDCC=..."
 
 # 必填 — API 鉴权密钥（未设置则跳过鉴权，等同裸奔）
 API_KEY=openssl-rand-hex-32-生成的随机字符串
 
 # 可选 — 默认值如下
-GEMINI_REFRESH_INTERVAL=30
 GEMINI_MAX_RETRIES=3
 PORT=4981
 HOST=127.0.0.1
@@ -67,7 +65,7 @@ RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX_REQUESTS=20
 ```
 
-**获取 Cookie**：浏览器访问 https://gemini.google.com 并登录 → F12 → Application → Cookies → 复制 `__Secure-1PSID` 和 `__Secure-1PSIDTS`。
+**获取 Cookie**：浏览器访问 https://gemini.google.com 并登录 → F12 → Application → Cookies → 复制 `gemini.google.com` / Google 登录相关的完整 Cookie 字符串，填入 `GEMINI_COOKIES`。`GEMINI_1PSID` / `GEMINI_1PSIDCC` 仍可作为兼容快捷项，但推荐使用完整 Cookie 集。
 
 > [!TIP]
 > 如果服务器需要通过代理访问外网，在 `.env` 中额外添加：
@@ -81,10 +79,10 @@ RATE_LIMIT_MAX_REQUESTS=20
 
 | 变量 | 必填 | 默认值 | 说明 |
 |------|------|--------|------|
-| `GEMINI_1PSID` | 是 | — | Google 主会话 Cookie |
-| `GEMINI_1PSIDTS` | 是 | — | Google 时间戳 Cookie |
+| `GEMINI_COOKIES` | 是 | — | 已登录 Gemini 浏览器会话的完整 Cookie 集 |
+| `GEMINI_1PSID` | 否 | — | 兼容快捷项；存在 `GEMINI_COOKIES` 时会从中解析 |
+| `GEMINI_1PSIDCC` | 否 | — | 兼容快捷项；存在 `GEMINI_COOKIES` 时会从中解析 |
 | `API_KEY` | 建议 | — | API 鉴权密钥，留空则不校验 |
-| `GEMINI_REFRESH_INTERVAL` | 否 | `30` | Cookie 轮换间隔（分钟） |
 | `GEMINI_MAX_RETRIES` | 否 | `3` | API 调用失败最大重试次数 |
 | `PORT` | 否 | `4981` | 监听端口 |
 | `HOST` | 否 | 空（`0.0.0.0`） | 绑定地址，反代场景设 `127.0.0.1` |
@@ -470,7 +468,7 @@ curl ${BASE_URL}/health
 ## 4. 安全建议
 
 - **API_KEY 务必设强随机值**：`openssl rand -hex 32`
-- **Cookie 保密**：`.env` 中的 `GEMINI_1PSID` 等同于 Google 账号密码，切勿泄露或提交到 Git
+- **Cookie 保密**：`.env` 中的 `GEMINI_COOKIES` 等同于 Google 账号密码，切勿泄露或提交到 Git
 - **绑定 localhost**：使用 nginx 反代时设 `HOST=127.0.0.1`，避免端口直接暴露
 - **限流保护**：开启 `RATE_LIMIT_ENABLED=true`，按需调整阈值
 - **只允许自己用**：可在 nginx 中加 IP 白名单或启用 `satisfy any` + HTTP Basic Auth

@@ -65,21 +65,18 @@
 
 1. Go to [gemini.google.com](https://gemini.google.com) and sign in
 2. Press `F12` → **Application** → **Storage** → **Cookies**
-3. Copy the values of `__Secure-1PSID` and `__Secure-1PSIDTS`
+3. Copy the full cookie set for `gemini.google.com` / Google auth cookies
 
 **Step 2 — Run**
 
 ```bash
 docker run -d -p 4981:4981 \
-  -e GEMINI_1PSID="your_psid_here" \
-  -e GEMINI_1PSIDTS="your_psidts_here" \
-  -e GEMINI_REFRESH_INTERVAL=30 \
+  -e GEMINI_COOKIES="APISID=...; SAPISID=...; __Secure-1PSID=...; __Secure-1PSIDCC=..." \
   -e GEMINI_MAX_RETRIES=3 \
   -e APP_ENV=production \
   -e RATE_LIMIT_ENABLED=true \
   -e RATE_LIMIT_WINDOW_MS=60000 \
   -e RATE_LIMIT_MAX_REQUESTS=10 \
-  -v ./cookies:/home/appuser/.cookies \
   --tmpfs /tmp:rw,size=512m \
   --tmpfs /home/appuser/.cache:rw,size=256m \
   --name gemini-web-to-api \
@@ -109,7 +106,7 @@ cd gemini-web-to-api
 
 1. Go to [gemini.google.com](https://gemini.google.com) and sign in
 2. Press `F12` → **Application** → **Storage** → **Cookies**
-3. Copy the values of `__Secure-1PSID` and `__Secure-1PSIDTS`
+3. Copy the full cookie set for `gemini.google.com` / Google auth cookies
 4. Create your `.env` from the example:
 
    ```bash
@@ -119,9 +116,7 @@ cd gemini-web-to-api
 5. Paste your cookie values into `.env`:
 
    ```env
-   GEMINI_1PSID=your_psid_here
-   GEMINI_1PSIDTS=your_psidts_here
-   GEMINI_REFRESH_INTERVAL=30
+   GEMINI_COOKIES="APISID=...; SAPISID=...; __Secure-1PSID=...; __Secure-1PSIDCC=..."
    GEMINI_MAX_RETRIES=3
    APP_ENV=production
    RATE_LIMIT_ENABLED=true
@@ -159,7 +154,7 @@ Your Gemini Web To API is running at `http://localhost:4981` 🎉
 
 - 🌉 **Universal AI Bridge**: One server, three protocols (OpenAI, Claude, Gemini)
 - 🔌 **Drop-in Replacement**: Works with existing OpenAI / Claude / Gemini SDKs
-- 🔄 **Smart Session Management**: Auto-rotates cookies to keep sessions alive
+- 🍪 **Browser Cookie Auth**: Uses a signed-in Gemini browser cookie set
 - ⚡ **High Performance**: Built with Go and Fiber for speed
 - 🐳 **Production Ready**: Docker Compose support, Swagger UI, health checks
 - 📝 **Well Documented**: Interactive API docs at `/swagger/`
@@ -172,9 +167,9 @@ Your Gemini Web To API is running at `http://localhost:4981` 🎉
 
 | Variable                  | Required | Default | Description                                          |
 | ------------------------- | -------- | ------- | ---------------------------------------------------- |
-| `GEMINI_1PSID`            | ✅ Yes   | —       | Main session cookie from Gemini                      |
-| `GEMINI_1PSIDTS`          | ✅ Yes   | —       | Timestamp cookie (prevents auth errors)              |
-| `GEMINI_REFRESH_INTERVAL` | ❌ No    | `30`    | Cookie rotation interval (minutes)                   |
+| `GEMINI_COOKIES`          | ✅ Yes   | —       | Full browser cookie set from a signed-in Gemini session |
+| `GEMINI_1PSID`            | ❌ No    | —       | Compatibility shortcut; parsed from `GEMINI_COOKIES` when present |
+| `GEMINI_1PSIDCC`          | ❌ No    | —       | Compatibility shortcut; parsed from `GEMINI_COOKIES` when present |
 | `GEMINI_MAX_RETRIES`      | ❌ No    | `3`     | Max retry attempts when an API call fails            |
 | `PORT`                    | ❌ No    | `4981`  | Server port                                          |
 | `RATE_LIMIT_ENABLED`      | ❌ No    | `false` | Enable or disable rate limiting                      |

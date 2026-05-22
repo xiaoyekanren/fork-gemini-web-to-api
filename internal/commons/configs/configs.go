@@ -29,12 +29,10 @@ type RateLimitConfig struct {
 }
 
 type GeminiConfig struct {
-	Secure1PSID     string
-	Secure1PSIDTS   string
-	Secure1PSIDCC   string
-	RefreshInterval int
-	MaxRetries      int
-	Cookies         string
+	Secure1PSID   string
+	Secure1PSIDCC string
+	MaxRetries    int
+	Cookies       string
 }
 
 type ClaudeConfig struct {
@@ -55,10 +53,9 @@ type ServerConfig struct {
 }
 
 const (
-	defaultServerPort            = "4981"
-	defaultGeminiRefreshInterval = 5
-	defaultGeminiMaxRetries      = 3
-	defaultLogLevel              = "info"
+	defaultServerPort       = "4981"
+	defaultGeminiMaxRetries = 3
+	defaultLogLevel         = "info"
 )
 
 func New() (*Config, error) {
@@ -70,7 +67,7 @@ func New() (*Config, error) {
 	// Server
 	cfg.Server.Port = getEnv("PORT", defaultServerPort)
 	cfg.Server.Host = getEnv("HOST", "")
-	
+
 	// General
 	cfg.LogLevel = getEnv("LOG_LEVEL", defaultLogLevel)
 
@@ -84,10 +81,8 @@ func New() (*Config, error) {
 
 	// Gemini
 	cfg.Gemini.Secure1PSID = os.Getenv("GEMINI_1PSID")
-	cfg.Gemini.Secure1PSIDTS = os.Getenv("GEMINI_1PSIDTS")
 	cfg.Gemini.Secure1PSIDCC = os.Getenv("GEMINI_1PSIDCC")
 	cfg.Gemini.Cookies = os.Getenv("GEMINI_COOKIES")
-	cfg.Gemini.RefreshInterval = getEnvInt("GEMINI_REFRESH_INTERVAL", defaultGeminiRefreshInterval)
 	cfg.Gemini.MaxRetries = getEnvInt("GEMINI_MAX_RETRIES", defaultGeminiMaxRetries)
 
 	// Validate configuration
@@ -102,13 +97,11 @@ func New() (*Config, error) {
 func (c *Config) Validate() error {
 	var missingVars []string
 
-	// Check Gemini configuration - at least one of these should be present
-	if c.Gemini.Secure1PSID == "" {
-		missingVars = append(missingVars, "GEMINI_1PSID")
+	// Gemini Web auth now relies on a browser cookie set. GEMINI_1PSID is
+	// still accepted as a compatibility shortcut.
+	if c.Gemini.Cookies == "" && c.Gemini.Secure1PSID == "" {
+		missingVars = append(missingVars, "GEMINI_COOKIES or GEMINI_1PSID")
 	}
-
-	// 1PSIDTS is optional — obtained via cookie rotation
-	_ = c.Gemini.Secure1PSIDTS
 
 	// Check Server port is valid
 	if c.Server.Port == "" {
