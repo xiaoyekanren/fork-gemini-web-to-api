@@ -51,7 +51,7 @@ GOOS=linux GOARCH=amd64 go build -o gemini-web-to-api ./cmd/server/
 
 ```env
 # 必填 — Google Cookie
-GEMINI_COOKIES="APISID=...; SAPISID=...; __Secure-1PSID=...; __Secure-1PSIDCC=..."
+GEMINI_COOKIES='APISID=...; SAPISID=...; __Secure-1PSID=...; __Secure-1PSIDCC=...'
 
 # 必填 — API 鉴权密钥（未设置则跳过鉴权，等同裸奔）
 API_KEY=openssl-rand-hex-32-生成的随机字符串
@@ -79,10 +79,10 @@ RATE_LIMIT_MAX_REQUESTS=20
 `GEMINI_COOKIES` 必须是 `name=value; name=value` 形式，例如：
 
 ```env
-GEMINI_COOKIES="APISID=...; SAPISID=...; SID=...; __Secure-1PSID=...; __Secure-1PSIDCC=...; __Secure-3PSID=..."
+GEMINI_COOKIES='APISID=...; SAPISID=...; SID=...; __Secure-1PSID=...; __Secure-1PSIDCC=...; __Secure-3PSID=...'
 ```
 
-不要包含 `Cookie:` 这几个字，也不要只复制单个 value。`GEMINI_1PSID` / `GEMINI_1PSIDCC` 仍可作为兼容快捷项，但推荐使用完整 Cookie 集。
+不要包含 `Cookie:` 这几个字，也不要只复制单个 value。建议用单引号包裹整串 Cookie，因为浏览器 Cookie 里可能包含 `$`，双引号在 shell 或 dotenv 场景下可能触发变量展开。`GEMINI_1PSID` / `GEMINI_1PSIDCC` 仍可作为兼容快捷项，但推荐使用完整 Cookie 集。
 
 > [!TIP]
 > 如果服务器需要通过代理访问外网，在 `.env` 中额外添加：

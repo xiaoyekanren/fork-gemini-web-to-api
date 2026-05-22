@@ -71,7 +71,7 @@
 
 ```bash
 docker run -d -p 4981:4981 \
-  -e GEMINI_COOKIES="APISID=...; SAPISID=...; __Secure-1PSID=...; __Secure-1PSIDCC=..." \
+  -e GEMINI_COOKIES='APISID=...; SAPISID=...; __Secure-1PSID=...; __Secure-1PSIDCC=...' \
   -e GEMINI_MAX_RETRIES=3 \
   -e APP_ENV=production \
   -e RATE_LIMIT_ENABLED=true \
@@ -116,7 +116,7 @@ cd gemini-web-to-api
 5. Paste your cookie values into `.env`:
 
    ```env
-   GEMINI_COOKIES="APISID=...; SAPISID=...; __Secure-1PSID=...; __Secure-1PSIDCC=..."
+   GEMINI_COOKIES='APISID=...; SAPISID=...; __Secure-1PSID=...; __Secure-1PSIDCC=...'
    GEMINI_MAX_RETRIES=3
    APP_ENV=production
    RATE_LIMIT_ENABLED=true
