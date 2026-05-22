@@ -203,11 +203,7 @@ func (c *Client) refreshSessionToken() error {
 	}
 
 	c.mu.Lock()
-	if c.cookies.Secure1PSIDCC != "" {
-		c.at = c.cookies.Secure1PSIDCC
-	} else {
-		c.at = matches[1]
-	}
+	c.at = matches[1]
 	c.healthy = true
 	c.mu.Unlock()
 
@@ -359,15 +355,26 @@ func (c *Client) GenerateContent(ctx context.Context, prompt string, options ...
 		}
 
 		httpStart := time.Now()
-		reqURL := EndpointGenerate + "?at=" + at
+		reqURL := EndpointGenerate + "?at=" + url.QueryEscape(at)
 		httpReq, _ := http.NewRequestWithContext(ctx, "POST", reqURL, strings.NewReader(formData.Encode()))
-		httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		for _, ck := range c.cookies.ToHTTPCookies() {
-			httpReq.AddCookie(ck)
+		for k, v := range DefaultHeaders {
+			httpReq.Header.Set(k, v)
+		}
+		httpReq.Header.Set("Accept", "*/*")
+		httpReq.Header.Set("Sec-Fetch-Site", "same-origin")
+		httpReq.Header.Set("Sec-Fetch-Mode", "cors")
+		httpReq.Header.Set("Sec-Fetch-Dest", "empty")
+		if c.cookies.ExtraCookies != "" {
+			httpReq.Header.Set("Cookie", c.cookies.ExtraCookies)
+		} else {
+			for _, ck := range c.cookies.ToHTTPCookies() {
+				httpReq.AddCookie(ck)
+			}
 		}
 		var httpResp *http.Response
 		var err error
-		httpResp, err = c.httpClient.GetClient().Do(httpReq)
+		hClient := &http.Client{Timeout: 30 * time.Second}
+		httpResp, err = hClient.Do(httpReq)
 		var respStr string
 		var respCode int
 		if err == nil {
