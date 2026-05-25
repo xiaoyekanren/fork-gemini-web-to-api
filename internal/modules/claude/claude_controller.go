@@ -108,7 +108,7 @@ func (h *ClaudeController) HandleMessages(c fiber.Ctx) error {
 			defer cancel()
 
 			err := h.service.GenerateMessageStream(ctx, req, func(ev dto.StreamEvent) bool {
-				return common.SendSSEEvent(w, h.log, ev)
+				return sendClaudeSSEEvent(w, h.log, ev)
 			})
 			if err != nil {
 				h.log.Error("GenerateMessageStream failed", zap.Error(err), zap.String("model", req.Model))
@@ -119,7 +119,7 @@ func (h *ClaudeController) HandleMessages(c fiber.Ctx) error {
 						Message: err.Error(),
 					},
 				}
-				_ = common.SendSSEEvent(w, h.log, errEv)
+				_ = sendClaudeSSEEvent(w, h.log, errEv)
 			}
 		})
 
@@ -177,4 +177,12 @@ func (c *ClaudeController) Register(group fiber.Router) {
 	group.Get("/models/:model_id", c.HandleModelByID)
 	group.Post("/messages", c.HandleMessages)
 	group.Post("/messages/count_tokens", c.HandleCountTokens)
+}
+
+func sendClaudeSSEEvent(w *bufio.Writer, log *zap.Logger, ev dto.StreamEvent) bool {
+	eventName := ev.Type
+	if eventName == "" {
+		eventName = "message"
+	}
+	return common.SendSSEChunk(w, log, eventName, ev) == nil
 }
