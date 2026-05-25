@@ -51,16 +51,37 @@ type ConfigContent struct {
 	Input map[string]interface{} `json:"input,omitempty"`
 }
 
+// StreamMessage is the message shape emitted by Anthropic-compatible streams.
+type StreamMessage struct {
+	ID           string          `json:"id"`
+	Type         string          `json:"type"`
+	Role         string          `json:"role"`
+	Model        string          `json:"model"`
+	Content      []ConfigContent `json:"content"`
+	StopReason   *string         `json:"stop_reason"`
+	StopSequence *string         `json:"stop_sequence"`
+	Usage        models.Usage    `json:"usage"`
+}
+
+// StreamContentBlock preserves required empty fields in content_block_start events.
+type StreamContentBlock struct {
+	Type  string                  `json:"type"`
+	Text  *string                 `json:"text,omitempty"`
+	ID    string                  `json:"id,omitempty"`
+	Name  string                  `json:"name,omitempty"`
+	Input *map[string]interface{} `json:"input,omitempty"`
+}
+
 // StreamEvent represents a streaming event
 type StreamEvent struct {
-	Type         string           `json:"type"`
-	Message      *MessageResponse `json:"message,omitempty"`
-	Index        int              `json:"index,omitempty"`
-	ContentBlock *ConfigContent   `json:"content_block,omitempty"`
-	DeltaField   *models.Delta    `json:"delta,omitempty"`
-	StopReason   string           `json:"stop_reason,omitempty"`
-	UsageField   *models.Usage    `json:"usage,omitempty"`
-	Error        *Error           `json:"error,omitempty"`
+	Type         string              `json:"type"`
+	Message      *StreamMessage      `json:"message,omitempty"`
+	Index        *int                `json:"index,omitempty"`
+	ContentBlock *StreamContentBlock `json:"content_block,omitempty"`
+	DeltaField   *models.Delta       `json:"delta,omitempty"`
+	StopReason   string              `json:"stop_reason,omitempty"`
+	UsageField   *models.Usage       `json:"usage,omitempty"`
+	Error        *Error              `json:"error,omitempty"`
 }
 
 type Error struct {

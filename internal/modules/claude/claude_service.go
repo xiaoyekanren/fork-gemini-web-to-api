@@ -127,12 +127,15 @@ func (s *ClaudeService) GenerateMessageStream(ctx context.Context, req dto.Messa
 	// message_start
 	if !onEvent(dto.StreamEvent{
 		Type: "message_start",
-		Message: &dto.MessageResponse{
-			ID:    response.ID,
-			Type:  "message",
-			Role:  "assistant",
-			Model: req.Model,
-			Usage: response.Usage,
+		Message: &dto.StreamMessage{
+			ID:           response.ID,
+			Type:         "message",
+			Role:         "assistant",
+			Model:        req.Model,
+			Content:      []dto.ConfigContent{},
+			StopReason:   nil,
+			StopSequence: nil,
+			Usage:        response.Usage,
 		},
 	}) {
 		return nil
@@ -141,13 +144,18 @@ func (s *ClaudeService) GenerateMessageStream(ctx context.Context, req dto.Messa
 	for i, content := range response.Content {
 		// content_block_start
 		startEv := dto.StreamEvent{
-			Type:         "content_block_start",
-			Index:        i,
-			ContentBlock: &dto.ConfigContent{Type: content.Type},
+			Type:  "content_block_start",
+			Index: claudeStreamIndex(i),
+			ContentBlock: &dto.StreamContentBlock{
+				Type: content.Type,
+			},
 		}
 		if content.Type == "tool_use" {
 			startEv.ContentBlock.ID = content.ID
 			startEv.ContentBlock.Name = content.Name
+			startEv.ContentBlock.Input = claudeEmptyInput()
+		} else if content.Type == "text" {
+			startEv.ContentBlock.Text = claudeEmptyText()
 		}
 		if !onEvent(startEv) {
 			return nil
@@ -158,7 +166,7 @@ func (s *ClaudeService) GenerateMessageStream(ctx context.Context, req dto.Messa
 			for _, chunk := range chunks {
 				if !onEvent(dto.StreamEvent{
 					Type:  "content_block_delta",
-					Index: i,
+					Index: claudeStreamIndex(i),
 					DeltaField: &models.Delta{
 						Type: "text_delta",
 						Text: chunk,
@@ -178,7 +186,7 @@ func (s *ClaudeService) GenerateMessageStream(ctx context.Context, req dto.Messa
 			}
 			if !onEvent(dto.StreamEvent{
 				Type:  "content_block_delta",
-				Index: i,
+				Index: claudeStreamIndex(i),
 				DeltaField: &models.Delta{
 					Type:        "input_json_delta",
 					PartialJSON: string(inputJSON),
@@ -191,7 +199,7 @@ func (s *ClaudeService) GenerateMessageStream(ctx context.Context, req dto.Messa
 		// content_block_stop
 		if !onEvent(dto.StreamEvent{
 			Type:  "content_block_stop",
-			Index: i,
+			Index: claudeStreamIndex(i),
 		}) {
 			return nil
 		}
@@ -210,6 +218,20 @@ func (s *ClaudeService) GenerateMessageStream(ctx context.Context, req dto.Messa
 	// message_stop
 	onEvent(dto.StreamEvent{Type: "message_stop"})
 	return nil
+}
+
+func claudeStreamIndex(index int) *int {
+	return &index
+}
+
+func claudeEmptyText() *string {
+	text := ""
+	return &text
+}
+
+func claudeEmptyInput() *map[string]interface{} {
+	input := map[string]interface{}{}
+	return &input
 }
 
 func (s *ClaudeService) buildToolBridgePrompt(req dto.MessageRequest, basePrompt string, toolChoice claudeToolChoice) string {
